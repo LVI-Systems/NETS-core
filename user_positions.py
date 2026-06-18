@@ -65,3 +65,36 @@ class user_positons:
         acct_position[2][side] = side_margin_debit
         self.acctAvbl[mpid] += margin_freed
         return True
+
+    def fill_order(self, mpid, order_price, order_side, fill_price, fill_qty):
+        acct_position = self.positions[mpid]
+        market_position = acct_position[0]
+        opposite_side = 1 - order_side
+
+        order_side_position, opposite_position = (
+            market_position[order_side],
+            market_position[opposite_side],
+        )
+
+        # tokens returned for closure of positions
+        position_size_closed = (
+            opposite_position
+            if order_side_position > opposite_position
+            else order_side_position
+        )
+
+        position_closure_credit = position_size_closed * self.contractNotional
+        order_execution_debit = self.order_collateral(fill_price, order_side, fill_qty)
+
+        # calculate the change in the account side margin credit / debit
+        side_margin_debit = acct_position[2][order_side]
+        prev = side_margin_debit
+        side_margin_debit -= self.order_collateral(order_price, order_side, fill_qty)
+        side_margin_debit += position_closure_credit
+        if prev > 0 and side_margin_debit > prev:
+            raise Exception("Fatal error: order execution resulted in increased")
+
+        self.acctBalance[mpid] += position_closure_credit - order_execution_debit
+        acct_position[2][order_side] = side_margin_debit
+        market_position[order_side] += fill_qty - position_size_closed
+        market_position[opposite_side] -= position_size_closed
