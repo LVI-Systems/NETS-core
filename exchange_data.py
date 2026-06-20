@@ -1,5 +1,6 @@
 import array
 
+
 class exchange_data:
     def __init__(self, max_accounts, max_orders, max_markets, acct_max_orders):
         self.maxOrders = max_orders
@@ -49,20 +50,21 @@ class exchange_data:
             raise Exception(
                 "Exchange out of memory: global order limit has been reached"
             )
-        
+
         if self.acctTotalOrders[mpid] == self.acctMaxOrders:
             return False
         self.acctTotalOrders[mpid] += 1
-        
+
         alloc_order_slot = self.vacantOrderID[self.usedOrders]
         self.usedOrders += 1
 
         if self.acctHeadOrder[mpid] == -1:
             self.acctHeadOrder[mpid] = alloc_order_slot
+        self.acctTailOrder[mpid] = alloc_order_slot
+
         old_tail = self.acctTailOrder[mpid]
         if old_tail != -1:
             self.orderAcctTail[old_tail] = alloc_order_slot
-        self.acctTailOrder[mpid] = alloc_order_slot
         self.orderAcctHead[alloc_order_slot] = old_tail
         self.orderAcctTail[alloc_order_slot] = -1
         return alloc_order_slot
