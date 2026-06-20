@@ -1,6 +1,4 @@
 import array
-from ssl import ALERT_DESCRIPTION_RECORD_OVERFLOW
-
 
 class exchange_data:
     def __init__(self, max_accounts, max_orders, max_markets, acct_max_orders):
@@ -17,6 +15,7 @@ class exchange_data:
         self.available = array.array("i", acct_default)
         self.acctHeadOrder = array.array("i", acct_default)
         self.acctTailOrder = array.array("i", acct_default)
+        self.acctTotalOrders = array.array("i", acct_default)
 
         order_default = [-1 for i in range(0, max_orders)]
         self.orderID = array.array("i", [i for i in range(0, max_orders)])
@@ -40,6 +39,9 @@ class exchange_data:
             initial_balance = int(initial_balance)
             self.balance[acct_slot] = initial_balance
             self.available[acct_slot] = initial_balance
+            self.acctTotalOrders[acct_slot] = 0
+            self.acctHeadOrder[acct_slot] = -1
+            self.acctTailOrder[acct_slot] = -1
             self.acctStatus[acct_slot] = 1
 
     def get_order_slot(self, mpid):
@@ -47,7 +49,11 @@ class exchange_data:
             raise Exception(
                 "Exchange out of memory: global order limit has been reached"
             )
-
+        
+        if self.acctTotalOrders[mpid] == self.acctMaxOrders:
+            return False
+        self.acctTotalOrders[mpid] += 1
+        
         alloc_order_slot = self.vacantOrderID[self.usedOrders]
         self.usedOrders += 1
 
@@ -56,6 +62,7 @@ class exchange_data:
         old_tail = self.acctTailOrder[mpid]
         if old_tail != -1:
             self.orderAcctTail[old_tail] = alloc_order_slot
+        self.acctTailOrder[mpid] = alloc_order_slot
         self.orderAcctHead[alloc_order_slot] = old_tail
         self.orderAcctTail[alloc_order_slot] = -1
         return alloc_order_slot
@@ -63,6 +70,7 @@ class exchange_data:
     def release_order_slot(self, mpid, order_slot):
         self.usedOrders -= 1
         self.vacantOrderID[self.usedOrders] = order_slot
+        self.acctTotalOrders[mpid] -= 1
 
         order_acct_head = self.orderAcctHead[order_slot]
         order_acct_tail = self.orderAcctTail[order_slot]
@@ -70,6 +78,11 @@ class exchange_data:
             self.orderAcctTail[order_acct_head] = order_acct_tail
         if order_acct_tail != -1:
             self.orderAcctHead[order_acct_tail] = order_acct_head
+
+        if order_acct_head == -1:
+            self.acctHeadOrder[mpid] = order_acct_tail
+        if order_acct_tail == -1:
+            self.acctTailOrder[mpid] = order_acct_head
 
         order_clob_head = self.orderClobHead[order_slot]
         order_clob_tail = self.orderClobTail[order_slot]
