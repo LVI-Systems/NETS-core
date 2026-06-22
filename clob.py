@@ -1,18 +1,27 @@
+from this import d
+
 from exchange_data import exchange_data as exchg_data
 from market import Market
 from sortedcontainers import SortedDict as sd
+from user_positions import user_positions as positions
 
 
 class clob:
     def __init__(self, _market: Market, clob_slot_idx: int):
+        exchange_data: exchg_data = _market._exchange_data
+
         self.tob = [None, None]
         self.books = [sd(), sd()]
-        self.userPositions = {}
+        self.priceLevels = [self.books[0].keys, self.books[1].keys]
+        self.userPositions = positions(
+            _exchange_data=exchange_data, market_ticks=_market.contractNotional
+        )
 
-        exchange_data: exchg_data = _market._exchange_data
         self.contractNotional = _market.contractNotional
+        # TODO Pending removal of acctOrderLimit in this class
         self.acctOrderLimit = exchange_data.acctMaxOrders
-        self.clobSlot = clob_slot_idx
+        self.marketSlot = _market.marketSlot
+        self.outcomeSlot = clob_slot_idx
 
         self.tobSum = _market.tob_sum
         # [bid, offer]
@@ -36,7 +45,7 @@ class clob:
         self.orderClobTail = exchange_data.orderClobTail
 
     def log_occupied_clob(self, side):
-        mkt_slot = self.clobSlot
+        mkt_slot = self.outcomeSlot
         if self.marketHeadClobs[side] == -1:
             self.marketHeadClobs[side] = mkt_slot
             self.marketTailClobs[side] = mkt_slot
@@ -60,3 +69,51 @@ class clob:
             self.clobList[mkt_tail].headClobs[side] = mkt_head
         else:
             self.marketTailClobs[side] = mkt_head
+
+    def post_order(self, mpid, price, side, qty):
+        # Verify that the order can be placed by the account, including the consideration of account order limit, global memory limit
+        new_order_idx = self._allocOrder(mpid)
+        if new_order_idx is False:
+            return False, "Account-wide order limit has been reached"
+        if not self.userPositions.post_order(mpid, price, side, qty):
+            return False, "Insufficient Collateral"
+
+        self.orderMarket[new_order_idx] = self.marketSlot
+        self.orderOutcome[new_order_idx] = self.outcomeSlot
+
+        book_price = price * [-1, 1][side]
+        side_book = self.books[side]
+        current_tob = self.tob[side]
+        if current_tob is None:
+            self.tob[side] = book_price
+            self.tobSum[side] -= -self.contractNotional * side == 1 + price
+        elif book_price < current_tob:
+            self.tob[side] = book_price
+            self.tobSum[side] += (current_tob - book_price) * ([1, -1][side])
+
+        # remember: sd{price:[head_price, tail_price, head_order, tail_order, sum_orders, sum_qty]}
+        if book_price not in side_book:
+            side_book_price_levels = self.priceLevels[side]
+            price_level = [None, None, new_order_idx, new_order_idx, 1, qty]
+            side_book[book_price] = price_level
+            price_idx = side_book_price_levels.index(book_price)
+            tail_price_level_idx = len(side_book_price_levels)
+
+            new_order_clob_head, new_order_clob_tail = -1, -1
+            # handle head of new order
+            if price_idx > 0:
+                head_price = side_book_price_levels[price_idx - 1]
+                head_price_tail_order = side_book[head_price][3]
+                new_order_clob_head = head_price_tail_order
+                self.orderClobTail[head_price_tail_order] = new_order_idx
+                price_level[0] = head_price
+            # handle tail of new order
+            if price_idx < tail_price_level_idx:
+                tail_price = side_book_price_levels[price_idx + 1]
+                tail_price_head_order = side_book[tail_price][2]
+                new_order_clob_tail = tail_price_head_order
+                self.orderClobHead[tail_price_head_order] = new_order_idx
+                price_level[1] = tail_price
+
+            self.orderClobHead[new_order_idx] = new_order_clob_head
+            self.orderClobTail[new_order_idx] = new_order_clob_tail
