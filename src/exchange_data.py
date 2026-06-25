@@ -35,6 +35,9 @@ class exchange_data:
         self.usedOrders = 0
 
     def create_acct(self, acct_slot, initial_balance):
+        if acct_slot == 0:
+            return False, "Cannot create account at system account slot"
+
         if self.acctStatus[acct_slot] == -1:
             initial_balance = int(initial_balance)
             self.balance[acct_slot] = initial_balance
@@ -43,6 +46,7 @@ class exchange_data:
             self.acctHeadOrder[acct_slot] = -1
             self.acctTailOrder[acct_slot] = -1
             self.acctStatus[acct_slot] = 1
+        return False, "This account slot is already taken"
 
     def get_order_slot(self, mpid):
         if self.usedOrders == self.maxOrders:

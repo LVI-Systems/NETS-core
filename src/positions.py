@@ -1,17 +1,28 @@
-class user_positions:
+# TODO: Add contract resolution function
+
+
+class positions:
     def __init__(self, _exchange_data, market_ticks):
         self.contractNotional = market_ticks
         # [[long, short], [bid_qty, offer_qty], [bid_collateral, offer_collateral]]
         # where the margin used by orders are contractNotional * (min(long, offer_qty) + min(short, bid_qty)) - bid_collateral - offer_collateral
-        self.positions = {}
+        self.acctPositions = {}
+        self.exchangePosition = [0, 0]
+        self.exchangeCollateralUsed = 0
         self.acctBalance = _exchange_data.balance
         self.acctAvbl = _exchange_data.available
+
+    def exchange_fill(self, price, side, qty):
+        self.exchangePosition[side == 0] += qty
+        self.exchangeCollateralUsed += (
+            price if side == 0 else self.contractNotional - price
+        ) * qty
 
     def order_collateral(self, price, side, qty):
         return qty * (price if side == 0 else self.contractNotional - price)
 
     def post_order(self, mpid, price, side, qty):
-        acct_position = self.positions.get(mpid, [[0, 0], [0, 0], [0, 0]])
+        acct_position = self.acctPositions.get(mpid, [[0, 0], [0, 0], [0, 0]])
         side_margin_debit = acct_position[2][side]
         raw_order_collateral = self.order_collateral(price, side, qty)
 
@@ -43,12 +54,12 @@ class user_positions:
             self.acctAvbl[mpid] -= margin_used
             acct_position[2][side] += margin_debit_delta
             acct_position[1][side] += qty
-            self.positions[mpid] = acct_position
+            self.acctPositions[mpid] = acct_position
             return True
         return False
 
     def cancel_order(self, mpid, price, side, qty):
-        acct_position = self.positions[mpid]
+        acct_position = self.acctPositions[mpid]
         side_margin_debit = acct_position[2][side]
         raw_order_collateral = self.order_collateral(price, side, qty)
 
@@ -70,7 +81,7 @@ class user_positions:
         return True
 
     def fill_order(self, mpid, order_price, order_side, fill_price, fill_qty):
-        acct_position = self.positions[mpid]
+        acct_position = self.acctPositions[mpid]
         market_position = acct_position[0]
         opposite_side = 1 - order_side
 
@@ -102,3 +113,5 @@ class user_positions:
         acct_position[1][order_side] -= fill_qty
         market_position[order_side] += fill_qty - position_size_closed
         market_position[opposite_side] -= position_size_closed
+
+        self.exchange_fill(fill_price, opposite_side, fill_qty)

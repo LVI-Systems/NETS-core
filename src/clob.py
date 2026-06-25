@@ -1,9 +1,10 @@
-from this import d
+# TODO: add lifting TOB function
+#
+from sortedcontainers import SortedDict as sd
+from user_positions import user_positions as positions
 
 from exchange_data import exchange_data as exchg_data
 from market import Market
-from sortedcontainers import SortedDict as sd
-from user_positions import user_positions as positions
 
 
 class clob:
@@ -82,7 +83,7 @@ class clob:
         self.orderOutcome[new_order_idx] = self.outcomeSlot
 
         book_price = price * [-1, 1][side]
-        side_book = self.books[side]
+        side_book = self.books[side]    
         current_tob = self.tob[side]
         if current_tob is None:
             self.tob[side] = book_price
@@ -117,7 +118,20 @@ class clob:
 
             self.orderClobHead[new_order_idx] = new_order_clob_head
             self.orderClobTail[new_order_idx] = new_order_clob_tail
+            side_book[book_price] = price_level
+        else:
+            price_level = side_book[book_price]
+            price_level[4] += 1
+            price_level[5] += self.orderQty[new_order_idx]
 
-        # TODO: add book_price in side_book case
-
-    # TODO: add lifting TOB function
+            new_order_clob_head = price_level[3]
+            self.orderClobHead[new_order_idx] = new_order_clob_head
+            self.orderClobTail[new_order_clob_head] = new_order_idx
+            price_level[3] = new_order_idx
+            tail_price = price_level[1]
+            if tail_price is None:
+                self.orderClobTail[new_order_idx] = -1
+            else:
+                tail_price_head_order = side_book[tail_price]
+                self.orderClobTail[new_order_idx] = tail_price_head_order
+                self.orderClobHead[tail_price_head_order] = new_order_idx
