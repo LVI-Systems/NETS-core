@@ -149,16 +149,11 @@ class positions:
         market_position = acct_position[0]
         opposite_side = 1 - order_side
 
-        order_side_position, opposite_position = (
-            market_position[order_side],
-            market_position[opposite_side],
-        )
+        opposite_position = acct_position[opposite_side]
 
         # Position quantity closed by the fill
         position_size_closed = (
-            opposite_position
-            if order_side_position > opposite_position
-            else order_side_position
+            opposite_position if fill_qty > opposite_position else fill_qty
         )
 
         # Calculate the returns caused by closing out positions
