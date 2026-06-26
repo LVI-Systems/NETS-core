@@ -83,7 +83,7 @@ class clob:
         self.orderOutcome[new_order_idx] = self.outcomeSlot
 
         book_price = price * [-1, 1][side]
-        side_book = self.books[side]    
+        side_book = self.books[side]
         current_tob = self.tob[side]
         if current_tob is None:
             self.tob[side] = book_price
