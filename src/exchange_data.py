@@ -20,13 +20,12 @@ class exchange_data:
         self.acctTailOrder = array.array("i", acct_default)
         self.acctTotalOrders = array.array("i", acct_default)
 
-        self.orderID = array.array("i", [i for i in range(0, max_orders)])
-        self.vacantOrderID = array.array("i", [i for i in range(0, max_orders)])
+        self.orderID = array.array("i", [i for i in range(0, self.acctMaxOrders)])
+        self.vacantOrderID = array.array("i", [i for i in range(0, self.acctMaxOrders)])
 
-        order_default = [-1 for i in range(0, max_orders)]
+        order_default = [-1 for i in range(0, self.acctMaxOrders)]
         self.orderMPID = array.array("i", order_default)
-        self.orderMarket = array.array("i", order_default)
-        self.orderOutcome = array.array("h", order_default)
+        self.orderOutcome = array.array("i", order_default)
         self.orderPrice = array.array("i", order_default)
         self.orderSide = array.array("b", order_default)
         self.orderQty = array.array("i", order_default)
@@ -35,8 +34,8 @@ class exchange_data:
         self.orderClobHead = array.array("i", order_default)
         self.orderClobTail = array.array("i", order_default)
 
-        self.markets = [None for i in range(0, max_markets)]
-        self.questions = [None]
+        self.outcomes = [None for i in range(0, self.maxOutcomes)]
+        self.questions = [None for i in range(0, self.maxQuestions)]
         self.usedOrders = 0
 
     def create_acct(self, acct_slot, initial_balance):

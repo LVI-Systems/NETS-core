@@ -10,16 +10,16 @@ from exchange_data import exchange_data
 
 
 class question:
-    def __init__(self, _exchange_data: exchange_data, question_data):
+    def __init__(self, _exchange_data: exchange_data, question_config):
         """
         Initializes a question object.
         A question is a group of markets. Markets cannot simultaneously belong to more than one question.
         """
         self._exchange_data = _exchange_data
 
-        self.questionSlot = question_data["questionSlots"]
-        self.outcomeSlots = question_data["outcomeSlots"]
-        self.contractNotional = question_data["contractNotional"]
+        self.questionSlot = question_config["questionSlots"]
+        self.outcomeSlots = question_config["outcomeSlots"]
+        self.contractNotional = question_config["contractNotional"]
 
         self.outcomes = []
         for outcome_slot in self.outcomeSlots:
