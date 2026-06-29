@@ -2,9 +2,11 @@ import array
 
 
 class exchange_data:
-    def __init__(self, max_accounts, max_orders, max_markets, acct_max_orders):
-        self.maxOrders = max_orders
-        self.acctMaxOrders = acct_max_orders
+    def __init__(self, max_accounts, _config):
+        self.maxOrders = _config["maxGlobalOrders"]
+        self.maxOutcomes = _config["maxGlobalOutcomes"]
+        self.maxQuestions = _config["maxGlobalQuestions"]
+        self.acctMaxOrders = _config["maxAccountOrders"]
 
         acct_default = [-1 for i in range(0, max_accounts)]
         # account status
@@ -34,6 +36,7 @@ class exchange_data:
         self.orderClobTail = array.array("i", order_default)
 
         self.markets = [None for i in range(0, max_markets)]
+        self.questions = [None]
         self.usedOrders = 0
 
     def create_acct(self, acct_slot, initial_balance):

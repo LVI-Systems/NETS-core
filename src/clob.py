@@ -1,41 +1,40 @@
-# TODO: add lifting TOB function
-
 from exchange_data import exchange_data as exchg_data
-from market import Market
 from positions import positions as positions
+from question import question
 from sortedcontainers import SortedDict as sd
 
 
 class clob:
-    def __init__(self, _market: Market, clob_slot_idx: int):
-        exchange_data: exchg_data = _market._exchange_data
-
+    def __init__(self, exchange_data: exchg_data, market_config):
         self.tob = [None, None]
         self.books = [sd(), sd()]
         self.priceLevels = [self.books[0].keys, self.books[1].keys]
+        self.contractNotional = market_config["notional"]
         self.userPositions = positions(
-            _exchange_data=exchange_data, market_ticks=_market.contractNotional
+            _exchange_data=exchange_data, market_ticks=self.contractNotional
         )
 
-        self.contractNotional = _market.contractNotional
         # TODO Pending removal of acctOrderLimit in this class
         self.acctOrderLimit = exchange_data.acctMaxOrders
-        self.marketSlot = _market.marketSlot
-        self.outcomeSlot = clob_slot_idx
+        self.questionSlot = market_config["question_id"]
+        self.outcomeSlot = market_config["outcome_id"]
 
-        self.tobSum = _market.tob_sum
-        # [bid, offer]
-        self.headClobs = [-1, -1]
-        self.tailClobs = [-1, -1]
-        self.marketHeadClobs = _market.head_clobs
-        self.marketTailClobs = _market.tail_clobs
-        self.clobList = _market.markets
+        if self.questionSlot != -1:
+            question: question = exchange_data.questions[self.questionSlot]
+            self.tobSum = question.tob_sum
+            # [bid, offer]
+            self.headClobs = [-1, -1]
+            self.tailClobs = [-1, -1]
+            # [bid mkt slot, offer mkt slot]
+            self.questionHeadClobs = question.head_clobs
+            self.questionTailClobs = question.tail_clobs
+            # All other outcome markets in the same class
+            self.clobList = question.markets
 
         self._allocOrder = exchange_data.get_order_slot
         self._deallocOrder = exchange_data.release_order_slot
         self.orderID = exchange_data.orderID
         self.orderMPID = exchange_data.orderMPID
-        self.orderMarket = exchange_data.orderMarket
         self.orderOutcome = exchange_data.orderOutcome
         self.orderPrice = exchange_data.orderPrice
         self.orderSide = exchange_data.orderSide
@@ -46,30 +45,30 @@ class clob:
         self.orderClobTail = exchange_data.orderClobTail
 
     def log_occupied_clob(self, side):
-        mkt_slot = self.outcomeSlot
-        if self.marketHeadClobs[side] == -1:
-            self.marketHeadClobs[side] = mkt_slot
-            self.marketTailClobs[side] = mkt_slot
+        outcome_slot = self.outcomeSlot
+        if self.questionHeadClobs[side] == -1:
+            self.questionHeadClobs[side] = outcome_slot
+            self.questionTailClobs[side] = outcome_slot
             return
-        current_tail = self.marketTailClobs[side]
-        if current_tail == mkt_slot:
+        current_tail = self.questionTailClobs[side]
+        if current_tail == outcome_slot:
             return
-        self.clobList[current_tail].tailClobs[side] = mkt_slot
+        self.clobList[current_tail].tailClobs[side] = outcome_slot
         self.tailClobs[side] = -1
         self.headClobs[side] = current_tail
 
     def log_empty_clob(self, side):
-        mkt_head = self.headClobs[side]
-        mkt_tail = self.tailClobs[side]
+        outcome_head = self.headClobs[side]
+        outcome_tail = self.tailClobs[side]
 
-        if mkt_head != -1:
-            self.clobList[mkt_head].tailClobs[side] = mkt_tail
+        if outcome_head != -1:
+            self.clobList[outcome_head].tailClobs[side] = outcome_tail
         else:
-            self.marketHeadClobs[side] = mkt_tail
-        if mkt_tail != -1:
-            self.clobList[mkt_tail].headClobs[side] = mkt_head
+            self.questionHeadClobs[side] = outcome_tail
+        if outcome_tail != -1:
+            self.clobList[outcome_tail].headClobs[side] = outcome_head
         else:
-            self.marketTailClobs[side] = mkt_head
+            self.questionTailClobs[side] = outcome_head
 
     def deduct_price_lvl(self, side, price, sum_orders, sum_qty):
         side_book = self.books[side]
@@ -101,7 +100,6 @@ class clob:
         if not post_order_success:
             return False, return_msg
 
-        self.orderMarket[new_order_idx] = self.marketSlot
         self.orderOutcome[new_order_idx] = self.outcomeSlot
 
         book_price = price * [-1, 1][side]
