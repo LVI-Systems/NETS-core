@@ -23,7 +23,7 @@ class question:
 
         self.outcomes = []
         for outcome_slot in self.outcomeSlots:
-            outcome = self._exchange_data.markets[outcome_slot]
+            outcome = self._exchange_data.outcomes[outcome_slot]
             if outcome is None:
                 raise Exception("One or more outcomes in the question is not found")
 

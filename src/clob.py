@@ -1,5 +1,5 @@
 from exchange_data import exchange_data as exchg_data
-from positions import positions as positions
+from positions import positions
 from question import question
 from sortedcontainers import SortedDict as sd
 
@@ -19,7 +19,8 @@ class clob:
         self.questionSlot = market_config["question_id"]
         self.outcomeSlot = market_config["outcome_id"]
 
-        if self.questionSlot != -1:
+        self.questionEnabled = self.questionSlot != -1
+        if self.questionEnabled:
             question: question = exchange_data.questions[self.questionSlot]
             self.tobSum = question.tob_sum
             # [bid, offer]
@@ -45,6 +46,9 @@ class clob:
         self.orderClobTail = exchange_data.orderClobTail
 
     def log_occupied_clob(self, side):
+        if not self.questionEnabled:
+            return
+
         outcome_slot = self.outcomeSlot
         if self.questionHeadClobs[side] == -1:
             self.questionHeadClobs[side] = outcome_slot
@@ -58,6 +62,9 @@ class clob:
         self.headClobs[side] = current_tail
 
     def log_empty_clob(self, side):
+        if not self.questionEnabled:
+            return
+
         outcome_head = self.headClobs[side]
         outcome_tail = self.tailClobs[side]
 
@@ -86,6 +93,9 @@ class clob:
         if tail_price is not None:
             side_book[tail_price][0] = head_price
         del side_book[book_price]
+
+        if not len(self.priceLevels[side]):
+            self.log_empty_clob(side)
         return True
 
     def post_order(self, mpid, price, side, qty):
@@ -115,6 +125,9 @@ class clob:
         # remember: sd{price:[head_price, tail_price, head_order, tail_order, sum_orders, sum_qty]}
         if book_price not in side_book:
             side_book_price_levels = self.priceLevels[side]
+            if not len(side_book_price_levels):
+                self.log_occupied_clob(side)
+
             price_level = [None, None, new_order_idx, new_order_idx, 1, qty]
             side_book[book_price] = price_level
             price_idx = side_book_price_levels.index(book_price)
