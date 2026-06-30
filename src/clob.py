@@ -1,7 +1,8 @@
+from sortedcontainers import SortedDict as sd
+
 from exchange_data import exchange_data as exchg_data
 from positions import positions
 from question import question
-from sortedcontainers import SortedDict as sd
 
 
 class clob:
@@ -185,3 +186,18 @@ class clob:
 
         self.deduct_price_lvl(order_side, order_price, 1, order_qty)
         self._deallocOrder(order_mpid, order_idx)
+
+    def cancel_all_orders(self):
+        cumulative_orders_cancelled = 0
+        for side, book in enumerate(self.books):
+            price_levels = self.priceLevels[side]
+            if not len(price_levels):
+                continue
+            top_of_book = price_levels[0]
+            top_order_idx = book[top_of_book][2]
+            while top_order_idx != -1:
+                top_order_mpid = self.orderMPID[top_order_idx]
+                self._deallocOrder(top_order_mpid, top_order_idx)
+                top_order_idx = self.orderClobTail[top_order_idx]
+                cumulative_orders_cancelled += 1
+        return True, f"Cancelled {cumulative_orders_cancelled} orders"

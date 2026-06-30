@@ -187,6 +187,12 @@ class positions:
         self.exchange_fill(fill_price, opposite_side, fill_qty)
 
     def get_position_settlement_value(self, position, settlement_price):
+        """
+        Get the settlement value of a position given the position and settlement price.
+        Args:
+            position (list[long, short]): position used to compute settlement value.
+            settlement_price (int): settlement value of the position.
+        """
         return position[0] * settlement_price + position[1] * (
             self.contractNotional - settlement_price
         )
@@ -215,9 +221,9 @@ class positions:
         self.acctAvbl[0] += exchange_balance_delta
 
         cumulative_settled = 0
-        for mpid, userPosition in self.acctPositions.values():
+        for mpid, user_position in self.acctPositions.values():
             mpid = int(mpid)
-            user_market_position = userPosition[0]
+            user_market_position = user_position[0]
             user_position_settlement_value = self.get_position_settlement_value(
                 user_market_position, settlement_value
             )
@@ -226,3 +232,20 @@ class positions:
             cumulative_settled += sum(user_market_position)
 
         return True, f"Settled {cumulative_settled} contracts."
+
+    def remove_all_orders(self):
+        """
+        Log the removal of all orders assosciated with the outcome.
+        WARNING: This function does not modify order data and only frees their collateral.
+        """
+        for mpid, user_position in self.acctPositions.values():
+            mpid = int(mpid)
+            user_collateral_usage = user_position[2]
+            collateral_freed = sum([
+                min(0, side_collateral) for side_collateral in user_collateral_usage
+            ])
+            self.acctAvbl[mpid] += collateral_freed
+
+            # zero the total user side order lot quantity and collateral usage
+            user_position[1] = [0, 0]
+            user_collateral_usage = [0, 0]
