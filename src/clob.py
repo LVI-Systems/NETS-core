@@ -132,7 +132,7 @@ class clob:
             price_level = [None, None, new_order_idx, new_order_idx, 1, qty]
             side_book[book_price] = price_level
             price_idx = side_book_price_levels.index(book_price)
-            tail_price_level_idx = len(side_book_price_levels)
+            tail_price_level_idx = len(side_book_price_levels) - 1
 
             new_order_clob_head, new_order_clob_tail = -1, -1
             # handle head of new order
