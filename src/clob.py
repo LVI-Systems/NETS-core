@@ -104,8 +104,23 @@ class clob:
             self.log_empty_clob(side)
         return True
 
-    def post_order(self, mpid, price, side, qty):
+    def top_of_book(self, side):
+        real_tob = self.tob[side]
+        virtual_tob = self.contractNotional - (self.tobSum[1 - side] - real_tob)
+        if side == 0:
+            return True, real_tob if real_tob > virtual_tob else False, virtual_tob
+        return False, virtual_tob if real_tob > virtual_tob else True, real_tob
+
+    def place_order(self, mpid, price, side, qty):
         # Verify that the order can be placed by the account, including the consideration of account order limit, global memory limit
+
+        price = int(price)
+        qty = int(qty)
+        if price < 0 or price > self.contractNotional:
+            return False, "Order price is out of bounds"
+        if qty < 1:
+            return False, "Quantity must be larger than 0"
+
         new_order_idx = self._allocOrder(mpid)
         if new_order_idx is False:
             return False, "Account-wide order limit has been reached"
@@ -117,6 +132,12 @@ class clob:
             return False, return_msg
 
         self.orderOutcome[new_order_idx] = self.outcomeSlot
+        # TODO: actually fill the new order
+
+    def post_order(self, new_order_idx):
+        price = self.orderPrice[new_order_idx]
+        side = self.orderSide[new_order_idx]
+        qty = self.orderQty[new_order_idx]
 
         book_price = price * [-1, 1][side]
         side_book = self.books[side]
