@@ -1,5 +1,3 @@
-from unittest.util import unorderable_list_difference
-
 from sortedcontainers import SortedDict as sd
 
 from exchange_data import exchange_data as exchg_data
@@ -25,14 +23,7 @@ class clob:
         self.questionEnabled = self.questionSlot != -1
         if self.questionEnabled:
             question: question = exchange_data.questions[self.questionSlot]
-            self.tobSum = question.tob_sum
-            # [bid, offer]
-            self.headClobs = [-1, -1]
-            self.tailClobs = [-1, -1]
-            # [bid mkt slot, offer mkt slot]
-            self.questionHeadClobs = question.head_clobs
-            self.questionTailClobs = question.tail_clobs
-            # All other outcome markets in the same class
+            self.tobSum = question.tob_su
             self.clobList = question.markets
 
         self._allocOrder = exchange_data.get_order_slot
@@ -47,62 +38,6 @@ class clob:
         self.orderAcctTail = exchange_data.orderAcctTail
         self.orderClobHead = exchange_data.orderClobHead
         self.orderClobTail = exchange_data.orderClobTail
-
-    def log_occupied_clob(self, side):
-        if not self.questionEnabled:
-            return
-
-        outcome_slot = self.outcomeSlot
-        if self.questionHeadClobs[side] == -1:
-            self.questionHeadClobs[side] = outcome_slot
-            self.questionTailClobs[side] = outcome_slot
-            return
-        current_tail = self.questionTailClobs[side]
-        if current_tail == outcome_slot:
-            return
-        self.clobList[current_tail].tailClobs[side] = outcome_slot
-        self.tailClobs[side] = -1
-        self.headClobs[side] = current_tail
-
-    def log_empty_clob(self, side):
-        if not self.questionEnabled:
-            return
-
-        outcome_head = self.headClobs[side]
-        outcome_tail = self.tailClobs[side]
-
-        if outcome_head != -1:
-            self.clobList[outcome_head].tailClobs[side] = outcome_tail
-        else:
-            self.questionHeadClobs[side] = outcome_tail
-        if outcome_tail != -1:
-            self.clobList[outcome_tail].headClobs[side] = outcome_head
-        else:
-            self.questionTailClobs[side] = outcome_head
-
-    def deduct_price_lvl(self, side, price, sum_orders, sum_qty):
-        side_book = self.books[side]
-        book_price = price * [-1, 1][side]
-        price_lvl = side_book[book_price]
-        price_lvl[4] -= sum_orders
-        price_lvl[5] -= sum_qty
-
-        if price_lvl[4] > 0:
-            return False
-
-        if book_price == self.tob[side]:
-            self.tob[side] = price_lvl[1]
-
-        head_price, tail_price = price_lvl[0:2]
-        if head_price is not None:
-            side_book[head_price][1] = tail_price
-        if tail_price is not None:
-            side_book[tail_price][0] = head_price
-        del side_book[book_price]
-
-        if not len(self.priceLevels[side]):
-            self.log_empty_clob(side)
-        return True
 
     def top_of_book(self, side):
         real_tob = self.tob[side]
@@ -132,7 +67,9 @@ class clob:
             return False, return_msg
 
         self.orderOutcome[new_order_idx] = self.outcomeSlot
-        # TODO: actually fill the new order
+
+        # TODO: Fill the incoming order
+        # Procedure to be used: Use top_of_book function to find the best price and path to fill, then execute against that path.
 
     def post_order(self, new_order_idx):
         price = self.orderPrice[new_order_idx]
@@ -143,6 +80,7 @@ class clob:
         side_book = self.books[side]
         current_tob = self.tob[side]
 
+        # Adjust top of book and the sum thereof if necessary.
         if self.questionEnabled:
             if current_tob is None:
                 self.tob[side] = book_price
@@ -151,11 +89,11 @@ class clob:
                 self.tob[side] = book_price
                 self.tobSum[side] += (current_tob - book_price) * ([1, -1][side])
 
+        # Insert the new order in the book and make a new price level if needed.
+        # Data manipulated: orderbook dict, order CLOB heads/tails
         # remember: sd{price:[head_price, tail_price, head_order, tail_order, sum_orders, sum_qty]}
         if book_price not in side_book:
             side_book_price_levels = self.priceLevels[side]
-            if not len(side_book_price_levels):
-                self.log_occupied_clob(side)
 
             price_level = [None, None, new_order_idx, new_order_idx, 1, qty]
             side_book[book_price] = price_level
@@ -216,8 +154,24 @@ class clob:
         if order_tail != -1:
             self.orderClobHead[order_tail] = order_head
 
-        self.deduct_price_lvl(order_side, order_price, 1, order_qty)
         self._deallocOrder(order_mpid, order_idx)
+
+        side_book = self.books[order_side]
+        book_price = order_price * [-1, 1][order_side]
+        price_lvl = side_book[book_price]
+
+        if book_price == self.tob[order_side]:
+            self.tob[order_side] = price_lvl[1]
+
+        price_lvl[4] -= 1
+        price_lvl[5] -= order_qty
+        if price_lvl[4] == 0:
+            head_price, tail_price = price_lvl[0:2]
+            if head_price is not None:
+                side_book[head_price][1] = tail_price
+            if tail_price is not None:
+                side_book[tail_price][0] = head_price
+            del side_book[book_price]
 
         return True, "Order Cancelled"
 
