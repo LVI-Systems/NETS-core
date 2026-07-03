@@ -10,23 +10,33 @@ from exchange_data import exchange_data
 
 
 class question:
-    def __init__(self, _exchange_data: exchange_data, question_config):
+    def __init__(self, exchange_data: exchange_data, question_config):
         """
         Initializes a question object.
         A question is a group of markets. Markets cannot simultaneously belong to more than one question.
+
+        Args:
+            exchange_data (exchange_data): global exchange data.
+            question_config (dict): configuration of the question:
+                {
+                    'outcome_slots': the slots containing outcome CLOBs.
+                    'question_slot': the slot belonging to the question.
+                    'contract_notional': contact notioanl value of all
+                    outcomes in the question.
+                }
         """
-        self._exchange_data = _exchange_data
 
-        self.questionSlot = question_config["questionSlots"]
-        self.outcomeSlots = question_config["outcomeSlots"]
-        self.contractNotional = question_config["contractNotional"]
+        self._exchange_data = exchange_data
 
-        self.outcomes = []
+        self.questionSlot = question_config["question_slot"]
+        self.outcomeSlots = question_config["outcome_slots"]
+        self.contractNotional = question_config["contract_notional"]
+
+        self.outcomeCLOBs = []
         for outcome_slot in self.outcomeSlots:
             outcome = self._exchange_data.outcomes[outcome_slot]
             if outcome is None:
                 raise Exception("One or more outcomes in the question is not found")
+            self.outcomeCLOBs.append(outcome)
 
-        self.tob_sum = [0, len(self.outcomes) * self.contractNotional]
-        self.head_clobs = [-1, -1]
-        self.tail_clobs = [-1, -1]
+        self.tob_sum = [0, len(self.outcomeCLOBs) * self.contractNotional]

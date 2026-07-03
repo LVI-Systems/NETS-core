@@ -7,9 +7,43 @@ from question import question
 
 class clob:
     def __init__(self, exchange_data: exchg_data, market_config):
+        """
+        Initialises a limit order book (CLOB) used in trading.
+
+        Args:
+            exchange_data (exchange_data object): global exchange data
+            market_config (dict): configuration of the specific market:
+                {
+                    'notional': contract notional denomination (int).
+                    'question_id': contract question ID (int/None).
+                    'outcome_id': contract outcome ID (int).
+                }
+            where 'question_id' and 'outcome_id' refer to the specific
+            slots that the specific outcome contract and its respective
+            question object (if any) belongs to.
+
+        The CLOB contains the following data that may be manipulated by
+        its functions:
+            clob.tob (list[None | int]): top-of-book, where the top-
+            level price key is stored for each side and None represents
+            an empty book.
+
+            clob.books (list[SortedDict()]): order books by side.
+
+            clob.priceLevels (list[SorteddKeysView()]): live referances
+            to the price levels of the order book on each side.
+
+            clob.tobSum (list[int]): the sum of the top of book on each
+            side. To be used only in case a question object is bound to
+            the CLOB.
+
+            clob.clobList: A list of all order books in the question,
+            including itself.
+
+        """
         self.tob = [None, None]
         self.books = [sd(), sd()]
-        self.priceLevels = [self.books[0].keys, self.books[1].keys]
+        self.priceLevels = [self.books[0].keys(), self.books[1].keys()]
         self.contractNotional = market_config["notional"]
         self.userPositions = positions(
             _exchange_data=exchange_data, market_ticks=self.contractNotional
@@ -22,8 +56,9 @@ class clob:
 
         self.questionEnabled = self.questionSlot != -1
         if self.questionEnabled:
+            self.selectionID = market_config["selection_id"]
             question: question = exchange_data.questions[self.questionSlot]
-            self.tobSum = question.tob_su
+            self.tobSum = question.tob_sum
             self.clobList = question.markets
 
         self._allocOrder = exchange_data.get_order_slot
