@@ -50,6 +50,8 @@ class exchange_data:
             self.acctHeadOrder[acct_slot] = -1
             self.acctTailOrder[acct_slot] = -1
             self.acctStatus[acct_slot] = 1
+            return True, "Account created successfully"
+
         return False, "This account slot is already taken"
 
     def get_order_slot(self, mpid):
