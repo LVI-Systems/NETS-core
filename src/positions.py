@@ -156,30 +156,16 @@ class positions:
             opposite_position if fill_qty > opposite_position else fill_qty
         )
 
-        # Calculate the returns caused by closing out positions
-        position_closure_credit = position_size_closed * self.contractNotional
-        # Calculate balance used from excuting the order
-        order_execution_debit = self.order_collateral(fill_price, order_side, fill_qty)
+        self.cancel_order(mpid, order_price, order_side, fill_qty)
 
-        # Calculate the change in the collateral usage of the execution side
-        # Identical logic to order cancellation:
-        # collateral usage delta = returns from closing position - operation order collateral
-        side_collateral_usage = acct_position[2][order_side]
-        prev = side_collateral_usage
-        side_collateral_usage -= self.order_collateral(
-            order_price, order_side, fill_qty
+        balance_chg = (
+            self.contractNotional * position_size_closed
+            - self.order_collateral(fill_price, order_side, fill_qty)
         )
-        side_collateral_usage += position_closure_credit
 
-        if prev > 0 and side_collateral_usage > prev:
-            raise Exception(
-                "Fatal error: order execution resulted in increased collateral usage\nExchange has been halted."
-            )
+        self.acctAvbl += balance_chg
+        self.acctBalance += balance_chg
 
-        # Update account balance, order cumulative quantity/net collateral usage and user position
-        self.acctBalance[mpid] += position_closure_credit - order_execution_debit
-        acct_position[2][order_side] = side_collateral_usage
-        acct_position[1][order_side] -= fill_qty
         market_position[order_side] += fill_qty - position_size_closed
         market_position[opposite_side] -= position_size_closed
 
@@ -241,9 +227,9 @@ class positions:
         for mpid, user_position in self.acctPositions.values():
             mpid = int(mpid)
             user_collateral_usage = user_position[2]
-            collateral_freed = sum([
-                min(0, side_collateral) for side_collateral in user_collateral_usage
-            ])
+            collateral_freed = sum(
+                [min(0, side_collateral) for side_collateral in user_collateral_usage]
+            )
             self.acctAvbl[mpid] += collateral_freed
 
             # zero the total user side order lot quantity and collateral usage
