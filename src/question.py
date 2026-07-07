@@ -15,6 +15,8 @@ class question:
         Initializes a question object.
         A question is a group of markets. Markets cannot simultaneously belong to more than one question.
 
+        Questions are to be initialised before initializing order books, as the initialization of the later
+
         Args:
             exchange_data (exchange_data): global exchange data.
             question_config (dict): configuration of the question:
@@ -32,11 +34,4 @@ class question:
         self.outcomeSlots = question_config["outcome_slots"]
         self.contractNotional = question_config["contract_notional"]
 
-        self.outcomeCLOBs = []
-        for outcome_slot in self.outcomeSlots:
-            outcome = self._exchange_data.outcomes[outcome_slot]
-            if outcome is None:
-                raise Exception("One or more outcomes in the question is not found")
-            self.outcomeCLOBs.append(outcome)
-
-        self.tob_sum = [0, len(self.outcomeCLOBs) * self.contractNotional]
+        self.tob_sum = [0, len(self.outcomeSlots) * self.contractNotional]
