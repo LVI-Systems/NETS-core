@@ -6,40 +6,20 @@ from question import question
 
 
 class clob:
+    """Central Limit Order Book (CLOB) implementation.
+
+    Manages order books (bids and asks), top-of-book tracking,
+    order placement/cancellation, and partial fills against the
+    best available liquidity.
+    """
+
     def __init__(self, exchange_data: exchg_data, market_config):
-        """
-        Initialises a limit order book (CLOB) used in trading.
+        """Initialize the CLOB with exchange data and market configuration.
 
         Args:
-            exchange_data (exchange_data object): global exchange data
-            market_config (dict): configuration of the specific market:
-                {
-                    'notional': contract notional denomination (int).
-                    'question_id': contract question ID (int/None).
-                    'outcome_id': contract outcome ID (int).
-                }
-            where 'question_id' and 'outcome_id' refer to the specific
-            slots that the specific outcome contract and its respective
-            question object (if any) belongs to.
-
-        The CLOB contains the following data that may be manipulated by
-        its functions:
-            clob.tob (list[None | int]): top-of-book, where the top-
-            level price key is stored for each side and None represents
-            an empty book.
-
-            clob.books (list[SortedDict()]): order books by side.
-
-            clob.priceLevels (list[SorteddKeysView()]): live referances
-            to the price levels of the order book on each side.
-
-            clob.tobSum (list[int]): the sum of the top of book on each
-            side. To be used only in case a question object is bound to
-            the CLOB.
-
-            clob.clobList: A list of all order books in the question,
-            including itself.
-
+            exchange_data: Shared exchange state object.
+            market_config: Dict containing notional, question_id,
+                outcome_id, and selection_id for the market.
         """
         self.tob = [None, None]
         self.books = [sd(), sd()]
@@ -75,6 +55,18 @@ class clob:
         self.orderClobTail = exchange_data.orderClobTail
 
     def top_of_book(self, side):
+        """Return the best executable price for the given side.
+
+        Args:
+            side: 0 for bid, 1 for ask.
+
+        Returns:
+            A tuple of (is_real, real_tob_price, virtual_tob_price).
+            For bid side (0): returns (True, real_tob, virtual_tob)
+                where the executable price is the higher of the two.
+            For ask side (1): returns (False, virtual_tob, real_tob)
+                where the executable price is the lower of the two.
+        """
         real_tob = self.tob[side]
         virtual_tob = self.contractNotional - (self.tobSum[1 - side] - real_tob)
         if side == 0:
@@ -82,8 +74,20 @@ class clob:
         return False, virtual_tob if real_tob > virtual_tob else True, real_tob
 
     def place_order(self, mpid, price, side, qty):
-        # Verify that the order can be placed by the account, including the consideration of account order limit, global memory limit
+        """Validate and allocate resources for a new order.
 
+        Checks price bounds, minimum quantity, and account order limits.
+        Does not post the order to the book — call post_order() separately.
+
+        Args:
+            mpid: Market participant ID.
+            price: Order price.
+            side: 0 for bid, 1 for ask.
+            qty: Order quantity.
+
+        Returns:
+            A tuple of (success: bool, message: str).
+        """
         price = int(price)
         qty = int(qty)
         if price < 0 or price > self.contractNotional:
@@ -107,6 +111,15 @@ class clob:
         # Procedure to be used: Use top_of_book function to find the best price and path to fill, then execute against that path.
 
     def post_order(self, new_order_idx):
+        """Post an allocated order to the appropriate order book.
+
+        Inserts the order into the sorted price levels, updates
+        top-of-book if needed, and links the order into the
+        cross-price order chain.
+
+        Args:
+            new_order_idx: Index of the pre-allocated order.
+        """
         price = self.orderPrice[new_order_idx]
         side = self.orderSide[new_order_idx]
         qty = self.orderQty[new_order_idx]
@@ -172,6 +185,18 @@ class clob:
                 self.orderClobHead[tail_price_head_order] = new_order_idx
 
     def cancel_order(self, order_idx):
+        """Cancel an order and remove it from the order book.
+
+        Unlinks the order from price levels and cross-price chains,
+        updates top-of-book if the cancelled order was at the best,
+        and releases the order slot.
+
+        Args:
+            order_idx: Index of the order to cancel.
+
+        Returns:
+            A tuple of (success: bool, message: str).
+        """
         order_mpid = self.orderMPID[order_idx]
         order_price = self.orderPrice[order_idx]
         order_side = self.orderSide[order_idx]
@@ -211,6 +236,19 @@ class clob:
         return True, "Order Cancelled"
 
     def lift_tob(self, side, qty, stp_mpid=-1):
+        """Lift bid (0) or ask (1) — intended to be used with the main fill function.
+
+        Args:
+            side: 0 for bid, 1 for ask.
+            qty: Quantity to lift.
+            stp_mpid: Optional market participant ID to self-trade against
+                and cancel.
+
+        Returns:
+            The total quantity lifted.
+        """
+
+        side_tob = self.tob[side]
         side_tob = self.tob[side]
         if side_tob is None:
             return False
@@ -247,6 +285,15 @@ class clob:
         return filled_qty
 
     def cancel_all_orders(self):
+        """Cancel every order across all price levels on all sides.
+
+        Releases all order slots and clears the books in-place.
+
+        Returns:
+            A tuple of (success: bool, message: str) with the count
+            of cancelled orders.
+        """
+
         cumulative_orders_cancelled = 0
         for side, book in enumerate(self.books):
             price_levels = self.priceLevels[side]

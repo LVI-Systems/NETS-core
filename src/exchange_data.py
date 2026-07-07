@@ -3,6 +3,18 @@ import array
 
 class exchange_data:
     def __init__(self, max_accounts, _config):
+        """
+        Manages global exchange state including order slots, account lifecycle,
+        and outcome/question data structures.
+
+        Args:
+            max_accounts (int): number of account slots to allocate.
+            _config (dict): configuration values for the exchange.
+                - 'maxGlobalOrders': total orders allowed across all accounts.
+                - 'maxAccountOrders': per-account order limit.
+                - 'maxOutcomes': maximum outcome CLOBs.
+                - 'maxQuestions': maximum question groups.
+        """
         self.maxOrders = _config["maxGlobalOrders"]
         self.maxOutcomes = _config["maxGlobalOutcomes"]
         self.maxQuestions = _config["maxGlobalQuestions"]
@@ -39,6 +51,19 @@ class exchange_data:
         self.usedOrders = 0
 
     def create_acct(self, acct_slot, initial_balance):
+        """
+        Create a trading account at the specified slot.
+
+        Args:
+            acct_slot (int): index of the account slot to activate.
+                Slot 0 is reserved for system use and cannot be used.
+            initial_balance (int|float): starting balance for the account.
+
+        Returns:
+            tuple: (success, message)
+                - success: True if account was created, False otherwise.
+                - message: descriptive string explaining the result.
+        """
         if acct_slot == 0:
             return False, "Cannot create account at system account slot"
 
@@ -55,6 +80,16 @@ class exchange_data:
         return False, "This account slot is already taken"
 
     def get_order_slot(self, mpid):
+        """
+        Allocate a free order slot for the given account.
+
+        Args:
+            mpid (int): Market Participant ID of the account requesting an order.
+
+        Returns:
+            int|False: index of the allocated order slot, or False if no slot is available.
+                Raises Exception if global order limit has been reached.
+        """
         if self.usedOrders == self.maxOrders:
             raise Exception(
                 "Exchange out of memory: global order limit has been reached"
@@ -81,6 +116,16 @@ class exchange_data:
         return alloc_order_slot
 
     def release_order_slot(self, mpid, order_slot):
+        """
+        Deallocate an order slot back to the pool.
+
+        Args:
+            mpid (int): Market Participant ID of the account releasing the order.
+            order_slot (int): index of the order slot to free.
+
+        Returns:
+            bool: always True on success.
+        """
         self.usedOrders -= 1
         self.vacantOrderID[self.usedOrders] = order_slot
         self.acctTotalOrders[mpid] -= 1
