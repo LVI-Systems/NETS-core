@@ -36,10 +36,9 @@ class clob:
 
         self.questionEnabled = self.questionSlot != -1
         if self.questionEnabled:
-            self.selectionID = market_config["selection_id"]
             question: question = exchange_data.questions[self.questionSlot]
             self.tobSum = question.tob_sum
-            self.clobList = question.markets
+            self.clobList = question.outcomeSlots
 
         self._allocOrder = exchange_data.get_order_slot
         self._deallocOrder = exchange_data.release_order_slot
@@ -61,17 +60,19 @@ class clob:
             side: 0 for bid, 1 for ask.
 
         Returns:
-            A tuple of (is_real, real_tob_price, virtual_tob_price).
-            For bid side (0): returns (True, real_tob, virtual_tob)
-                where the executable price is the higher of the two.
-            For ask side (1): returns (False, virtual_tob, real_tob)
-                where the executable price is the lower of the two.
+            A tuple of (is_real, real_tob_price).
+            For bids we return the real best price if executable,
+            otherwise a virtual price; for asks we do the opposite.
         """
+        # real_tob: actual best price in book for this side
         real_tob = self.tob[side]
+        # virtual_tob: derived price based on notional and opposite side sum
         virtual_tob = self.contractNotional - (self.tobSum[1 - side] - real_tob)
         if side == 0:
-            return True, real_tob if real_tob > virtual_tob else False, virtual_tob
-        return False, virtual_tob if real_tob > virtual_tob else True, real_tob
+            # bid: return real if higher than virtual, else virtual
+            return (True, real_tob) if real_tob > virtual_tob else (False, virtual_tob)
+        # ask: return real if lower than virtual, else virtual
+        return (False, virtual_tob) if real_tob > virtual_tob else (True, real_tob)
 
     def place_order(self, mpid, price, side, qty):
         """Validate and allocate resources for a new order.
@@ -137,9 +138,7 @@ class clob:
                 self.tob[side] = book_price
                 self.tobSum[side] += (current_tob - book_price) * ([1, -1][side])
 
-        # Insert the new order in the book and make a new price level if needed.
-        # Data manipulated: orderbook dict, order CLOB heads/tails
-        # remember: sd{price:[head_price, tail_price, head_order, tail_order, sum_orders, sum_qty]}
+        # price:[h_price, t_price, h_order, t_order, tot_orders, tot_qty]
         if book_price not in side_book:
             side_book_price_levels = self.priceLevels[side]
 

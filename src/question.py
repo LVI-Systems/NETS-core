@@ -13,9 +13,11 @@ class question:
     def __init__(self, exchange_data: exchange_data, question_config):
         """
         Initializes a question object.
-        A question is a group of markets. Markets cannot simultaneously belong to more than one question.
+        A question is a group of mutually exclusive markets. Markets cannot
+        simultaneously belong to more than one question.
 
-        Questions are to be initialised before initializing order books, as the initialization of the later
+        Questions are to be initialised before initializing outcomes, as the
+        initialization of outcomes may involve linking to question objects.
 
         Args:
             exchange_data (exchange_data): global exchange data.
