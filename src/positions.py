@@ -163,8 +163,8 @@ class positions:
             - self.order_collateral(fill_price, order_side, fill_qty)
         )
 
-        self.acctAvbl += balance_chg
-        self.acctBalance += balance_chg
+        self.acctAvbl[mpid] += balance_chg
+        self.acctBalance[mpid] += balance_chg
 
         market_position[order_side] += fill_qty - position_size_closed
         market_position[opposite_side] -= position_size_closed
@@ -228,7 +228,7 @@ class positions:
             mpid = int(mpid)
             user_collateral_usage = user_position[2]
             collateral_freed = sum(
-                [min(0, side_collateral) for side_collateral in user_collateral_usage]
+                [max(0, side_collateral) for side_collateral in user_collateral_usage]
             )
             self.acctAvbl[mpid] += collateral_freed
 
