@@ -1,6 +1,3 @@
-# TODO: Add contract resolution function
-
-
 class positions:
     def __init__(self, _exchange_data, market_ticks):
         self.contractNotional = market_ticks
