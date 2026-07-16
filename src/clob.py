@@ -38,7 +38,7 @@ class clob:
         if self.questionEnabled:
             question: question = exchange_data.questions[self.questionSlot]
             self.tobSum = question.tob_sum
-            self.clobList = question.outcomeSlots
+            self.linkedOutcomes = question.outcomeSlots
 
         self._allocOrder = exchange_data.get_order_slot
         self._deallocOrder = exchange_data.release_order_slot
