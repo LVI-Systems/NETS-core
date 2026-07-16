@@ -55,7 +55,7 @@ class clob:
 
         self.outcomeCLOBs = exchange_data.outcomes
 
-    def top_of_book(self, side):
+    def best_executable_quote(self, side):
         """Return the best executable price for the given side.
 
         Args:
