@@ -53,6 +53,8 @@ class clob:
         self.orderClobHead = exchange_data.orderClobHead
         self.orderClobTail = exchange_data.orderClobTail
 
+        self.outcomeCLOBs = exchange_data.outcomes
+
     def top_of_book(self, side):
         """Return the best executable price for the given side.
 
@@ -66,8 +68,14 @@ class clob:
         """
         # real_tob: actual best price in book for this side
         real_tob = self.tob[side]
+        if not self.questionEnabled:
+            return True, real_tob
+
         # virtual_tob: derived price based on notional and opposite side sum
         virtual_tob = self.contractNotional - (self.tobSum[1 - side] - real_tob)
+        if real_tob is None:
+            return False, virtual_tob
+
         if side == 0:
             # bid: return real if higher than virtual, else virtual
             return (True, real_tob) if real_tob > virtual_tob else (False, virtual_tob)
