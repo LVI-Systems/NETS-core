@@ -72,8 +72,10 @@ class clob:
             return True, real_tob
 
         # virtual_tob: derived price based on notional and opposite side sum
-        virtual_tob = self.contractNotional - (self.tobSum[1 - side] - real_tob)
-        if real_tob is None:
+        virtual_tob = self.contractNotional - (
+            self.tobSum[1 - side] - (0 if real_tob is None else real_tob)
+        )
+        if real_tob == 0:
             return False, virtual_tob
 
         if side == 0:
@@ -81,6 +83,12 @@ class clob:
             return (True, real_tob) if real_tob > virtual_tob else (False, virtual_tob)
         # ask: return real if lower than virtual, else virtual
         return (False, virtual_tob) if real_tob > virtual_tob else (True, real_tob)
+
+    def tob_qty(self, side):
+        tob = self.tob[side]
+        if tob is None:
+            return -1
+        return self.books[side][tob][5]
 
     def place_order(self, mpid, price, side, qty):
         """Validate and allocate resources for a new order.
@@ -117,7 +125,58 @@ class clob:
         self.orderOutcome[new_order_idx] = self.outcomeSlot
 
         # TODO: Fill the incoming order
-        # Procedure to be used: Use top_of_book function to find the best price and path to fill, then execute against that path.
+        # Procedure to be used: Use best_executable_quote function to find the best price and path to fill, then execute against that path.
+        matching_side = 1 - side
+        while True:
+            tob_real, tob_price = self.best_executable_quote(matching_side)
+            # exit the matching loop if the top of book is not crossing the new order
+            if qty == 0:
+                break
+            if (side == 0 and price < tob_price) or (side == 1 and price > tob_price):
+                break
+            if tob_real:
+                qty_matched = self.lift_tob(side=matching_side, qty=qty, stp_mpid=mpid)
+                qty_matched = min(qty, qty_matched)
+            else:
+                avl_outcomes: list[clob] = []
+                qty_matched = -1
+                for outcome_id in self.linkedOutcomes:
+                    if outcome_id == self.outcomeSlot:
+                        continue
+                    outcome: clob = self.outcomeCLOBs[outcome_id]
+                    outcome_quote_qty = outcome.tob_qty(matching_side)
+                    if outcome_quote_qty == -1:
+                        continue
+                    if qty_matched == -1:
+                        qty_matched = outcome_quote_qty
+                    else:
+                        if outcome_quote_qty < qty_matched:
+                            qty_matched = outcome_quote_qty
+
+                    avl_outcomes.append(outcome)
+
+                qty_matched = min(qty, qty_matched)
+
+                self.userPositions.fill_order(
+                    mpid=mpid,
+                    order_price=price,
+                    order_side=side,
+                    fill_price=tob_price,
+                    fill_qty=qty_matched,
+                )
+
+                for outcome_clob in avl_outcomes:
+                    outcome_clob.lift_tob(side=side, qty=qty_matched)
+
+        if qty == 0:
+            self._deallocOrder(mpid=mpid, order_slot=new_order_idx)
+        else:
+            self.orderMPID[new_order_idx] = mpid
+            self.orderOutcome = self.outcomeSlot
+            self.orderPrice = price
+            self.orderSide = side
+            self.orderQty = qty
+            self.post_order(new_order_idx=new_order_idx)
 
     def post_order(self, new_order_idx):
         """Post an allocated order to the appropriate order book.
