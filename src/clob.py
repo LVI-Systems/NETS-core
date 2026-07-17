@@ -91,10 +91,11 @@ class clob:
         return self.books[side][tob][5]
 
     def place_order(self, mpid, price, side, qty):
-        """Validate and allocate resources for a new order.
+        """
+        Add a new order into the book, clear its crossing quantities,
+        and post any unfilled quantity into the book.
 
-        Checks price bounds, minimum quantity, and account order limits.
-        Does not post the order to the book — call post_order() separately.
+        Collateral checks are done by this function.
 
         Args:
             mpid: Market participant ID.
@@ -124,8 +125,22 @@ class clob:
 
         self.orderOutcome[new_order_idx] = self.outcomeSlot
 
-        # TODO: Fill the incoming order
-        # Procedure to be used: Use best_executable_quote function to find the best price and path to fill, then execute against that path.
+        # Filling the incoming order.
+        # For every step that the incoming order takes,
+        # 1. Check if the order has an unfilled quantity
+        #
+        # 2. Check if the order crosses the best opposing quote (the
+        # best of the opposite top of book price and the cross-matching
+        # price against same-question orders on the same side)
+        #
+        # 3. Execute the taker orders, either via normal matching or
+        # (lifting the top-of-book normally) cross-matching (lifting
+        # the top-of-book of all populated books in the question, for
+        # the minimum quantity between the aggressing order and all top
+        # of books that are involved in the match
+        #
+        # 4. Execute the incoming order, and repeat until exhaustion.
+
         matching_side = 1 - side
         while True:
             tob_real, tob_price = self.best_executable_quote(matching_side)
