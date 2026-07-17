@@ -156,17 +156,16 @@ class clob:
                     avl_outcomes.append(outcome)
 
                 qty_matched = min(qty, qty_matched)
-
-                self.userPositions.fill_order(
-                    mpid=mpid,
-                    order_price=price,
-                    order_side=side,
-                    fill_price=tob_price,
-                    fill_qty=qty_matched,
-                )
-
                 for outcome_clob in avl_outcomes:
                     outcome_clob.lift_tob(side=side, qty=qty_matched)
+
+            self.userPositions.fill_order(
+                mpid=mpid,
+                order_price=price,
+                order_side=side,
+                fill_price=tob_price,
+                fill_qty=qty_matched,
+            )
 
         if qty == 0:
             self._deallocOrder(mpid=mpid, order_slot=new_order_idx)
