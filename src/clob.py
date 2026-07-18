@@ -55,6 +55,34 @@ class clob:
 
         self.outcomeCLOBs = exchange_data.outcomes
 
+    def initialize(self, head_orders):
+        """
+        Initialise the order book given head and tail orders.
+        To be called after initializing all questions and outcomes.
+
+        Args:
+            head_orders: [bid_head_idx, offer_head_idx]
+            -1 for no order.
+        """
+
+        for book in self.books:
+            book.clear()
+
+        for side, head_order_idx in head_orders:
+            if head_order_idx == -1:
+                continue
+
+            current_order = head_order_idx
+            order_list = []
+            while True:
+                order_list.append(current_order)
+                current_order = self.orderClobTail[current_order]
+                if current_order == -1:
+                    break
+
+            for order in order_list:
+                self.post_order(current_order)
+
     def best_executable_quote(self, side):
         """Return the best executable price for the given side.
 
