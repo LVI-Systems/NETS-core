@@ -24,6 +24,7 @@ class clob:
                 outcome_id, and selection_id for the market.
         """
         self.outcomeDescription = str(serialized_data["outcome_description"])
+        self.tradingEnabled = str(serialized_data["trading_enabled"])
 
         self.tob = [None, None]
         self.books = [sd(), sd()]
@@ -79,6 +80,7 @@ class clob:
 
         return {
             "outcome_description": str(self.outcomeDescription),
+            "trading_enabled": int(self.tradingEnabled),
             "notional": str(self.contractNotional),
             "question_id": int(self.questionSlot),
             "outcome_id": int(self.outcomeSlot),
@@ -165,6 +167,9 @@ class clob:
         Returns:
             A tuple of (success: bool, message: str).
         """
+        if not self.tradingEnabled:
+            return
+
         price = int(price)
         qty = int(qty)
         if price < 0 or price > self.contractNotional:
