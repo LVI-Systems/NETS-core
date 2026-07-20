@@ -138,7 +138,6 @@ class exchange_data:
                 "account": int(self.acctMaxOrders),
             },
             "max_questions": self.maxQuestions,
-            "max_orders": self.maxOrders,
             "accounts": serialized_accounts,
             "orders": serialized_orders,
             "questions": serialized_questions,
