@@ -1,3 +1,5 @@
+from weakref import proxy
+
 from sortedcontainers import SortedDict as sd
 
 from exchange_data import exchange_data as exchg_data
@@ -48,22 +50,21 @@ class clob:
             self.tobSum = question.tob_sum
             self.linkedOutcomes = question.outcomeSlots
 
-        self._alloc_order = exchange_data._get_order_slot
-        self._dealloc_order = exchange_data._release_order_slot
-        self.orderID = exchange_data.orderID
-        self.orderMPID = exchange_data.orderMPID
-        self.orderOutcome = exchange_data.orderOutcome
-        self.orderPrice = exchange_data.orderPrice
-        self.orderSide = exchange_data.orderSide
-        self.orderQty = exchange_data.orderQty
-        self.orderAcctHead = exchange_data.orderAcctHead
-        self.orderAcctTail = exchange_data.orderAcctTail
-        self.orderClobHead = exchange_data.orderClobHead
-        self.orderClobTail = exchange_data.orderClobTail
+        self._alloc_order = proxy(exchange_data._get_order_slot)
+        self._dealloc_order = proxy(exchange_data._release_order_slot)
+        self.orderID = proxy(exchange_data.orderID)
+        self.orderMPID = proxy(exchange_data.orderMPID)
+        self.orderOutcome = proxy(exchange_data.orderOutcome)
+        self.orderPrice = proxy(exchange_data.orderPrice)
+        self.orderSide = proxy(exchange_data.orderSide)
+        self.orderQty = proxy(exchange_data.orderQty)
+        self.orderAcctHead = proxy(exchange_data.orderAcctHead)
+        self.orderAcctTail = proxy(exchange_data.orderAcctTail)
+        self.orderClobHead = proxy(exchange_data.orderClobHead)
+        self.orderClobTail = proxy(exchange_data.orderClobTail)
 
         self.outcomeCLOBs = exchange_data.outcomes
 
-        head_buy_order, head_sell_order = -1, -1
         if "head_orders" in serialized_data:
             self.initialize(serialized_data["head_orders"])
 

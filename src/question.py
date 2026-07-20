@@ -30,8 +30,6 @@ class question:
                 }
         """
 
-        self._exchange_data = exchange_data
-
         self.questionSlot = serialized_data["question_slot"]
         self.outcomeSlots = serialized_data["outcome_slots"]
         self.contractNotional = serialized_data["contract_notional"]
