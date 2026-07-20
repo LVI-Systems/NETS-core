@@ -114,7 +114,7 @@ class clob:
                     break
 
             for order in order_list:
-                self.post_order(current_order)
+                self._post_order(current_order)
 
     def best_executable_quote(self, side):
         """Return the best executable price for the given side.
@@ -181,10 +181,10 @@ class clob:
         if new_order_idx is False:
             return False, "Account-wide order limit has been reached"
 
-        post_order_success, return_msg = self.userPositions.post_order(
+        _post_order_success, return_msg = self.userPositions._post_order(
             mpid, price, side, qty
         )
-        if not post_order_success:
+        if not _post_order_success:
             return False, return_msg
 
         self.orderOutcome[new_order_idx] = self.outcomeSlot
@@ -214,7 +214,7 @@ class clob:
             if (side == 0 and price < tob_price) or (side == 1 and price > tob_price):
                 break
             if tob_real:
-                qty_matched = self.lift_tob(side=matching_side, qty=qty, stp_mpid=mpid)
+                qty_matched = self._lift_tob(side=matching_side, qty=qty, stp_mpid=mpid)
             else:
                 avl_outcomes: list[clob] = []
                 qty_matched = -1
@@ -235,7 +235,7 @@ class clob:
 
                 qty_matched = min(qty, qty_matched)
                 for outcome_clob in avl_outcomes:
-                    outcome_clob.lift_tob(side=side, qty=qty_matched)
+                    outcome_clob._lift_tob(side=side, qty=qty_matched)
 
             self.userPositions.fill_order(
                 mpid=mpid,
@@ -253,9 +253,9 @@ class clob:
             self.orderPrice[new_order_idx] = price
             self.orderSide[new_order_idx] = side
             self.orderQty[new_order_idx] = qty
-            self.post_order(new_order_idx=new_order_idx)
+            self._post_order(new_order_idx=new_order_idx)
 
-    def post_order(self, new_order_idx):
+    def _post_order(self, new_order_idx):
         """Post an allocated order to the appropriate order book.
 
         Inserts the order into the sorted price levels, updates
@@ -341,6 +341,9 @@ class clob:
             A tuple of (success: bool, message: str).
         """
         order_mpid = self.orderMPID[order_idx]
+        if order_mpid == -1:
+            return False
+
         order_price = self.orderPrice[order_idx]
         order_side = self.orderSide[order_idx]
         order_qty = self.orderQty[order_idx]
@@ -378,7 +381,7 @@ class clob:
 
         return True, "Order Cancelled"
 
-    def lift_tob(self, side, qty, stp_mpid=-1):
+    def _lift_tob(self, side, qty, stp_mpid=-1):
         """Lift bid (0) or ask (1) — intended to be used with the main fill function.
 
         Args:
