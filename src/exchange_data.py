@@ -79,7 +79,7 @@ class exchange_data:
 
         return False, "This account slot is already taken"
 
-    def get_order_slot(self, mpid):
+    def _get_order_slot(self, mpid):
         """
         Allocate a free order slot for the given account.
 
@@ -115,7 +115,7 @@ class exchange_data:
         self.orderAcctTail[alloc_order_slot] = -1
         return alloc_order_slot
 
-    def release_order_slot(self, mpid, order_slot):
+    def _release_order_slot(self, mpid, order_slot):
         """
         Deallocate an order slot back to the pool.
 

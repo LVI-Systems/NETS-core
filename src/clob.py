@@ -40,8 +40,8 @@ class clob:
             self.tobSum = question.tob_sum
             self.linkedOutcomes = question.outcomeSlots
 
-        self._allocOrder = exchange_data.get_order_slot
-        self._deallocOrder = exchange_data.release_order_slot
+        self._alloc_order = exchange_data._get_order_slot
+        self._dealloc_order = exchange_data._release_order_slot
         self.orderID = exchange_data.orderID
         self.orderMPID = exchange_data.orderMPID
         self.orderOutcome = exchange_data.orderOutcome
@@ -141,7 +141,7 @@ class clob:
         if qty < 1:
             return False, "Quantity must be larger than 0"
 
-        new_order_idx = self._allocOrder(mpid)
+        new_order_idx = self._alloc_order(mpid)
         if new_order_idx is False:
             return False, "Account-wide order limit has been reached"
 
@@ -210,7 +210,7 @@ class clob:
             )
 
         if qty == 0:
-            self._deallocOrder(mpid=mpid, order_slot=new_order_idx)
+            self._dealloc_order(mpid=mpid, order_slot=new_order_idx)
         else:
             self.orderMPID[new_order_idx] = mpid
             self.orderOutcome[new_order_idx] = self.outcomeSlot
@@ -321,7 +321,7 @@ class clob:
         if order_tail != -1:
             self.orderClobHead[order_tail] = order_head
 
-        self._deallocOrder(order_mpid, order_idx)
+        self._dealloc_order(order_mpid, order_idx)
 
         side_book = self.books[order_side]
         book_price = order_price * [-1, 1][order_side]
@@ -410,7 +410,7 @@ class clob:
             top_order_idx = book[top_of_book][2]
             while top_order_idx != -1:
                 top_order_mpid = self.orderMPID[top_order_idx]
-                self._deallocOrder(top_order_mpid, top_order_idx)
+                self._dealloc_order(top_order_mpid, top_order_idx)
                 top_order_idx = self.orderClobTail[top_order_idx]
                 cumulative_orders_cancelled += 1
         return True, f"Cancelled {cumulative_orders_cancelled} orders"
