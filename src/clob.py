@@ -179,7 +179,6 @@ class clob:
                 break
             if tob_real:
                 qty_matched = self.lift_tob(side=matching_side, qty=qty, stp_mpid=mpid)
-                qty_matched = min(qty, qty_matched)
             else:
                 avl_outcomes: list[clob] = []
                 qty_matched = -1
