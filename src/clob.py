@@ -214,10 +214,10 @@ class clob:
             self._deallocOrder(mpid=mpid, order_slot=new_order_idx)
         else:
             self.orderMPID[new_order_idx] = mpid
-            self.orderOutcome = self.outcomeSlot
-            self.orderPrice = price
-            self.orderSide = side
-            self.orderQty = qty
+            self.orderOutcome[new_order_idx] = self.outcomeSlot
+            self.orderPrice[new_order_idx] = price
+            self.orderSide[new_order_idx] = side
+            self.orderQty[new_order_idx] = qty
             self.post_order(new_order_idx=new_order_idx)
 
     def post_order(self, new_order_idx):
