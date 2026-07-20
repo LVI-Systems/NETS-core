@@ -13,26 +13,34 @@ class clob:
     best available liquidity.
     """
 
-    def __init__(self, exchange_data: exchg_data, market_config):
+    def __init__(self, exchange_data: exchg_data, serialized_data: dict):
         """Initialize the CLOB with exchange data and market configuration.
 
         Args:
             exchange_data: Shared exchange state object.
-            market_config: Dict containing notional, question_id,
+            serialized_data: Dict containing notional, question_id,
                 outcome_id, and selection_id for the market.
         """
+        self.outcomeDescription = str(serialized_data["outcome_description"])
+
         self.tob = [None, None]
         self.books = [sd(), sd()]
         self.priceLevels = [self.books[0].keys(), self.books[1].keys()]
-        self.contractNotional = market_config["notional"]
+        self.contractNotional = int(serialized_data["notional"])
         self.userPositions = positions(
-            _exchange_data=exchange_data, market_ticks=self.contractNotional
+            _exchange_data=exchg_data,
+            serialized_data=serialized_data.get(
+                "user_positions", {"notional": self.contractNotional}
+            ),
         )
 
         # TODO Pending removal of acctOrderLimit in this class
         self.acctOrderLimit = exchange_data.acctMaxOrders
-        self.questionSlot = market_config["question_id"]
-        self.outcomeSlot = market_config["outcome_id"]
+        if "question_id" in serialized_data:
+            self.questionSlot = int(serialized_data["question_id"])
+        else:
+            self.questionSlot = -1
+        self.outcomeSlot = int(serialized_data["outcome_id"])
 
         self.questionEnabled = self.questionSlot != -1
         if self.questionEnabled:
@@ -54,6 +62,28 @@ class clob:
         self.orderClobTail = exchange_data.orderClobTail
 
         self.outcomeCLOBs = exchange_data.outcomes
+
+        head_buy_order, head_sell_order = -1, -1
+        if "head_orders" in serialized_data:
+            self.initialize(serialized_data["head_orders"])
+
+    def serialize(self):
+        head_orders = [-1, -1]
+        for side, side_tob in enumerate(self.tob):
+            if side_tob is None:
+                continue
+            side_book = self.books[side]
+            head_order = side_book[side_tob][2]
+            head_orders[side] = int(head_order)
+
+        return {
+            "outcome_description": str(self.outcomeDescription),
+            "notional": str(self.contractNotional),
+            "question_id": int(self.questionSlot),
+            "outcome_id": int(self.outcomeSlot),
+            "head_orders": head_orders,
+            "user_positions": self.userPositions.serialize(),
+        }
 
     def initialize(self, head_orders):
         """

@@ -10,7 +10,7 @@ from exchange_data import exchange_data
 
 
 class question:
-    def __init__(self, exchange_data: exchange_data, question_config):
+    def __init__(self, exchange_data: exchange_data, serialized_data: dict):
         """
         Initializes a question object.
         A question is a group of mutually exclusive markets. Markets cannot
@@ -32,8 +32,17 @@ class question:
 
         self._exchange_data = exchange_data
 
-        self.questionSlot = question_config["question_slot"]
-        self.outcomeSlots = question_config["outcome_slots"]
-        self.contractNotional = question_config["contract_notional"]
+        self.questionSlot = serialized_data["question_slot"]
+        self.outcomeSlots = serialized_data["outcome_slots"]
+        self.contractNotional = serialized_data["contract_notional"]
+        self.questionDescription = serialized_data["question_description"]
 
         self.tob_sum = [0, len(self.outcomeSlots) * self.contractNotional]
+
+    def serialize(self):
+        return {
+            "question_slot": self.questionSlot,
+            "outcome_slots": [str(slot) for slot in self.outcomeSlots],
+            "contract_notional": self.contractNotional,
+            "question_description": self.questionDescription,
+        }

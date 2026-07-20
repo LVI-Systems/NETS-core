@@ -1,13 +1,23 @@
 class positions:
-    def __init__(self, _exchange_data, market_ticks):
-        self.contractNotional = market_ticks
+    def __init__(self, _exchange_data, serialized_data: dict):
+        self.contractNotional = serialized_data["notional"]
         # [[long, short], [bid_qty, offer_qty], [bid_collateral, offer_collateral]]
         # where the margin used by orders are contractNotional * (min(long, offer_qty) + min(short, bid_qty)) - bid_collateral - offer_collateral
         self.acctPositions = {}
-        self.exchangePosition = [0, 0]
-        self.exchangeCollateralUsed = 0
-        self.acctBalance = _exchange_data.balance
-        self.acctAvbl = _exchange_data.available
+        if "positions" in serialized_data:
+            self.acctPositions = serialized_data.get("positions", {})
+        self.exchangePosition = serialized_data.get("exchange_position", [0, 0])
+        self.exchangeCollateralUsed = serialized_data.get("exchange_collateral_used", 0)
+        self.acctBalance = _exchange_data.acctBalance
+        self.acctAvbl = _exchange_data.acctAvailable
+
+    def serialize(self):
+        return {
+            "notional": int(self.contractNotional),
+            "positions": self.acctPositions,
+            "exchange_positions": self.exchangePosition,
+            "exchange_collateral_used": self.exchangeCollateralUsed,
+        }
 
     def exchange_fill(self, price, side, qty):
         """

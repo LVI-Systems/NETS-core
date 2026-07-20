@@ -1,24 +1,28 @@
 import array
 
+from clob import clob
+from question import question
+
 
 class exchange_data:
-    def __init__(self, max_accounts, _config):
+    def __init__(self, max_accounts, serialized_data: dict):
         """
         Manages global exchange state including order slots, account lifecycle,
         and outcome/question data structures.
 
         Args:
             max_accounts (int): number of account slots to allocate.
-            _config (dict): configuration values for the exchange.
+            serialized_data (dict): configuration values for the exchange.
                 - 'maxGlobalOrders': total orders allowed across all accounts.
                 - 'maxAccountOrders': per-account order limit.
                 - 'maxOutcomes': maximum outcome CLOBs.
                 - 'maxQuestions': maximum question groups.
         """
-        self.maxOrders = _config["maxGlobalOrders"]
-        self.maxOutcomes = _config["maxGlobalOutcomes"]
-        self.maxQuestions = _config["maxGlobalQuestions"]
-        self.acctMaxOrders = _config["maxAccountOrders"]
+        max_orders = serialized_data["max_orders"]
+        self.acctMaxOrders = int(max_orders["account"])
+        self.maxOrders = int(max_orders["global"])
+        self.maxQuestions = int(serialized_data["max_questions"])
+        self.maxOutcomes = int(serialized_data["max_outcomes"])
 
         acct_default = [-1 for i in range(0, max_accounts)]
         # account status
@@ -26,8 +30,8 @@ class exchange_data:
         # 1 = activated trading account at this slot
         self.acctStatus = array.array("b", acct_default)
         # account balance/avbl.balance, head order (for tracking the list of orders in an account)
-        self.balance = array.array("i", acct_default)
-        self.available = array.array("i", acct_default)
+        self.acctBalance = array.array("i", acct_default)
+        self.acctAvailable = array.array("i", acct_default)
         self.acctHeadOrder = array.array("i", acct_default)
         self.acctTailOrder = array.array("i", acct_default)
         self.acctTotalOrders = array.array("i", acct_default)
@@ -50,6 +54,97 @@ class exchange_data:
         self.questions = [None for i in range(0, self.maxQuestions)]
         self.usedOrders = 0
 
+    def load_exchange_objects(self, serialized_data):
+        for account_idx, account_data in serialized_data["accounts"]:
+            self.acctStatus[account_idx] = account_data[0]
+            self.acctBalance[account_idx] = account_data[1]
+            self.acctAvailable[account_idx] = account_data[2]
+            self.acctHeadOrder[account_idx] = account_data[3]
+            self.acctTailOrder[account_idx] = account_data[4]
+            self.acctTotalOrders[account_idx] = account_data[5]
+
+        for order_idx, order_data in serialized_data["orders"]:
+            self.orderMPID[order_idx] = order_data[0]
+            self.orderOutcome[order_idx] = order_data[1]
+            self.orderPrice[order_idx] = order_data[2]
+            self.orderSide[order_idx] = order_data[3]
+            self.orderQty[order_idx] = order_data[4]
+            self.orderAcctHead[order_idx] = order_data[5]
+            self.orderAcctTail[order_idx] = order_data[6]
+            self.orderClobHead[order_idx] = order_data[7]
+            self.orderClobTail[order_idx] = order_data[8]
+
+        for outcome_idx, outcome_data in serialized_data["outcomes"]:
+            self.outcomes[outcome_idx] = clob(
+                exchange_data=self, serialized_data=outcome_data
+            )
+
+        for question_idx, question_data in serialized_data["questions"]:
+            self.questions[question_idx] = question(
+                exchange_data=self, serialized_data=question_data
+            )
+
+    def serialize(self):
+        """
+        Serialize all class attributes to a dictionary.
+
+        Returns:
+            dict: A JSON-serializable representation of the exchange state.
+        """
+        serialized_accounts = {}
+        for account_idx, account_status in enumerate(self.acctStatus):
+            if account_status == -1:
+                continue
+            serialized_accounts[account_idx] = [
+                account_status,
+                self.acctBalance[account_idx],
+                self.acctAvailable[account_idx],
+                self.acctHeadOrder[account_idx],
+                self.acctTailOrder[account_idx],
+                self.acctTotalOrders[account_idx],
+            ]
+
+        serialized_orders = {}
+        for order_idx, order_mpid in enumerate(self.orderMPID):
+            if order_mpid == -1:
+                continue
+            serialized_orders[order_idx] = [
+                order_mpid,
+                self.orderOutcome[order_idx],
+                self.orderPrice[order_idx],
+                self.orderSide[order_idx],
+                self.orderQty[order_idx],
+                self.orderAcctHead[order_idx],
+                self.orderAcctTail[order_idx],
+                self.orderClobHead[order_idx],
+                self.orderClobTail[order_idx],
+            ]
+
+        serialized_outcomes = {
+            outcome_idx: outcome.serialize()
+            for outcome_idx, outcome in enumerate(self.outcomes)
+            if outcome is not None
+        }
+
+        serialized_questions = {
+            question_idx: question.serialize()
+            for question_idx, question in enumerate(self.questions)
+            if question is not None
+        }
+
+        return {
+            "max_orders": {
+                "global": int(self.maxOrders),
+                "account": int(self.acctMaxOrders),
+            },
+            "max_questions": self.maxQuestions,
+            "max_orders": self.maxOrders,
+            "accounts": serialized_accounts,
+            "orders": serialized_orders,
+            "questions": serialized_questions,
+            "outcomes": serialized_outcomes,
+        }
+
     def create_acct(self, acct_slot, initial_balance):
         """
         Create a trading account at the specified slot.
@@ -69,8 +164,8 @@ class exchange_data:
 
         if self.acctStatus[acct_slot] == -1:
             initial_balance = int(initial_balance)
-            self.balance[acct_slot] = initial_balance
-            self.available[acct_slot] = initial_balance
+            self.acctBalance[acct_slot] = initial_balance
+            self.acctAvailable[acct_slot] = initial_balance
             self.acctTotalOrders[acct_slot] = 0
             self.acctHeadOrder[acct_slot] = -1
             self.acctTailOrder[acct_slot] = -1
