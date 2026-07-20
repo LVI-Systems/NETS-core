@@ -144,6 +144,26 @@ class exchange_data:
             "outcomes": serialized_outcomes,
         }
 
+    def create_outcome(self, outcome_slot, outcome_description, notional):
+        outcome_slot = int(outcome_slot)
+        if outcome_slot >= self.maxOutcomes or outcome_slot < 0:
+            return False
+
+        if self.outcomes[outcome_slot] is not None:
+            return False
+
+        self.outcomes[outcome_slot] = clob(
+            exchange_data=self,
+            serialized_data={
+                "outcome_description": outcome_description,
+                "contract_notional": notional,
+                "outcome_id": outcome_slot,
+                "trading_enabled": False,
+            },
+        )
+
+        return True
+
     def create_acct(self, acct_slot, initial_balance):
         """
         Create a trading account at the specified slot.

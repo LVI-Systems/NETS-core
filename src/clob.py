@@ -24,7 +24,7 @@ class clob:
                 outcome_id, and selection_id for the market.
         """
         self.outcomeDescription = str(serialized_data["outcome_description"])
-        self.tradingEnabled = str(serialized_data["trading_enabled"])
+        self.tradingEnabled = bool(serialized_data["trading_enabled"])
 
         self.tob = [None, None]
         self.books = [sd(), sd()]
