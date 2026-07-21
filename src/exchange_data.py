@@ -201,14 +201,6 @@ class exchange_data:
             return False, f"Unexpected exception: {e}"
 
         outcome_slots = [outcome_slot for outcome_slot, outcome_name in sub_outcomes]
-        self.questions[question_slot] = question(
-            serialized_data={
-                "question_slot": question_slot,
-                "outcome_slots": outcome_slots,
-                "contract_notional": notional,
-                "question_description": question_desc,
-            }
-        )
 
         for outcome_slot, outcome_desc in sub_outcomes:
             self.create_outcome(
@@ -217,6 +209,15 @@ class exchange_data:
                 outcome_description=outcome_desc,
                 notional=notional,
             )
+
+        self.questions[question_slot] = question(
+            serialized_data={
+                "question_slot": question_slot,
+                "outcome_slots": outcome_slots,
+                "contract_notional": notional,
+                "question_description": question_desc,
+            }
+        )
 
         return True, "Question has been initialized successfully"
 
