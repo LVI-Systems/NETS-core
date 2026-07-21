@@ -144,7 +144,13 @@ class exchange_data:
             "outcomes": serialized_outcomes,
         }
 
-    def create_outcome(self, outcome_slot, outcome_description, notional):
+    def create_outcome(
+        self,
+        outcome_slot: int,
+        outcome_description: str,
+        notional: int,
+        question_slot: int = -1,
+    ):
         outcome_slot = int(outcome_slot)
         if outcome_slot >= self.maxOutcomes or outcome_slot < 0:
             return False
@@ -158,11 +164,61 @@ class exchange_data:
                 "outcome_description": outcome_description,
                 "contract_notional": notional,
                 "outcome_id": outcome_slot,
+                "question_id": question_slot,
                 "trading_enabled": False,
             },
         )
 
         return True
+
+    def create_question(self, notional, question, sub_outcomes):
+        try:
+            notional = int(notional)
+        except ValueError:
+            return False, "Notional value must be a positive integer"
+
+        if len(question) != 2:
+            return False, "Question arguments are missing or excessive"
+
+        try:
+            question_slot, question_desc = question
+            question_slot = int(question_slot)
+            if question_slot < 0 or question_slot >= self.maxQuestions:
+                raise Exception("InvalidSlot")
+            if self.questions[question_slot] is not None:
+                raise Exception("SlotOccupied")
+            for outcome in sub_outcomes:
+                outcome_slot, outcome_desc = outcome
+                outcome_slot = int(outcome_slot)
+                if outcome_slot < 0 or outcome_slot > self.maxOutcomes:
+                    raise Exception("InvalidSlot")
+                if self.outcomes[outcome_slot] is not None:
+                    raise Exception("SlotOccupied")
+                outcome = [outcome_slot, outcome_desc]
+        except TypeError:
+            return False, "Invaild question or suboutcome arguments"
+        except Exception as e:
+            return False, f"Unexpected exception: {e}"
+
+        outcome_slots = [outcome_slot for outcome_slot, outcome_name in sub_outcomes]
+        self.questions[question_slot] = question(
+            serialized_data={
+                "question_slot": question_slot,
+                "outcome_slots": outcome_slots,
+                "contract_notional": notional,
+                "question_description": question_desc,
+            }
+        )
+
+        for outcome_slot, outcome_desc in sub_outcomes:
+            self.create_outcome(
+                outcome_slot=outcome_slot,
+                question_slot=question_slot,
+                outcome_description=outcome_desc,
+                notional=notional,
+            )
+
+        return True, "Question has been initialized successfully"
 
     def create_acct(self, acct_slot, initial_balance):
         """
