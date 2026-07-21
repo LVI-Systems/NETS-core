@@ -181,7 +181,7 @@ class clob:
         if new_order_idx is False:
             return False, "Account-wide order limit has been reached"
 
-        _post_order_success, return_msg = self.userPositions._post_order(
+        _post_order_success, return_msg = self.userPositions.post_order(
             mpid, price, side, qty
         )
         if not _post_order_success:
