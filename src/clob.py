@@ -141,7 +141,7 @@ class clob:
 
         if side == 0:
             # bid: return real if higher than virtual, else virtual
-            return (True, real_tob) if real_tob > virtual_tob else (False, virtual_tob)
+            return (True, real_tob) if real_tob >= virtual_tob else (False, virtual_tob)
         # ask: return real if lower than virtual, else virtual
         return (False, virtual_tob) if real_tob > virtual_tob else (True, real_tob)
 
