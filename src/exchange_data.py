@@ -55,7 +55,7 @@ class exchange_data:
         self.usedOrders = 0
 
     def load_exchange_objects(self, serialized_data):
-        for account_idx, account_data in serialized_data["accounts"]:
+        for account_idx, account_data in serialized_data["accounts"].items():
             self.acctStatus[account_idx] = account_data[0]
             self.acctBalance[account_idx] = account_data[1]
             self.acctAvailable[account_idx] = account_data[2]
@@ -63,7 +63,7 @@ class exchange_data:
             self.acctTailOrder[account_idx] = account_data[4]
             self.acctTotalOrders[account_idx] = account_data[5]
 
-        for order_idx, order_data in serialized_data["orders"]:
+        for order_idx, order_data in serialized_data["orders"].items():
             self.orderMPID[order_idx] = order_data[0]
             self.orderOutcome[order_idx] = order_data[1]
             self.orderPrice[order_idx] = order_data[2]
@@ -74,12 +74,12 @@ class exchange_data:
             self.orderClobHead[order_idx] = order_data[7]
             self.orderClobTail[order_idx] = order_data[8]
 
-        for outcome_idx, outcome_data in serialized_data["outcomes"]:
+        for outcome_idx, outcome_data in serialized_data["outcomes"].items():
             self.outcomes[outcome_idx] = clob(
                 exchange_data=self, serialized_data=outcome_data
             )
 
-        for question_idx, question_data in serialized_data["questions"]:
+        for question_idx, question_data in serialized_data["questions"].items():
             self.questions[question_idx] = question(
                 exchange_data=self, serialized_data=question_data
             )
