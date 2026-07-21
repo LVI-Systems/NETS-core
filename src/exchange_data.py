@@ -190,7 +190,7 @@ class exchange_data:
             for outcome in sub_outcomes:
                 outcome_slot, outcome_desc = outcome
                 outcome_slot = int(outcome_slot)
-                if outcome_slot < 0 or outcome_slot > self.maxOutcomes:
+                if outcome_slot < 0 or outcome_slot >= self.maxOutcomes:
                     raise Exception("InvalidSlot")
                 if self.outcomes[outcome_slot] is not None:
                     raise Exception("SlotOccupied")
