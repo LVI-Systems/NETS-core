@@ -220,6 +220,29 @@ class exchange_data:
 
         return True, "Question has been initialized successfully"
 
+    def settle_outcome(
+        self, outcome_slot, settlement_value, _bypass_question_check=False
+    ):
+        if self.outcomes[outcome_slot] is None:
+            return False, "There is no outcome at this slot"
+
+        try:
+            settlement_value = int(settlement_value)
+        except ValueError:
+            return False, "Settlement value should be an integer"
+
+        outcome_clob: clob = self.outcomes[outcome_slot]
+        if (not _bypass_question_check) and outcome_clob.questionEnabled:
+            return (
+                False,
+                "This outcome is bound to a parent question. Please use the appropriate method to settle it.",
+            )
+
+        if settlement_value < 0 or settlement_value > outcome_clob.contractNotional:
+            return False, "Settlement value exceeded valid range"
+
+        return outcome_clob.settle_outcome(settlement_value)
+
     def create_acct(self, acct_slot, initial_balance):
         """
         Create a trading account at the specified slot.

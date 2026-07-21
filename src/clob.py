@@ -430,6 +430,19 @@ class clob:
 
         return filled_qty
 
+    def settle_outcome(self, settlement_value):
+        if settlement_value < 0 or settlement_value > self.contractNotional:
+            raise Exception(
+                "Fatal error: Uncaught attempt to settle outcome at an invalid price"
+            )
+
+        self.cancel_all_orders()
+        self.userPositions.settle_outcome(settlement_value)
+        return (
+            True,
+            f'Outcome "{self.outcomeDescription} has been settled at {settlement_value}.',
+        )
+
     def cancel_all_orders(self):
         """Cancel every order across all price levels on all sides.
 
@@ -452,4 +465,6 @@ class clob:
                 self._dealloc_order(top_order_mpid, top_order_idx)
                 top_order_idx = self.orderClobTail[top_order_idx]
                 cumulative_orders_cancelled += 1
+
+        self.userPositions.remove_all_orders()
         return True, f"Cancelled {cumulative_orders_cancelled} orders"
