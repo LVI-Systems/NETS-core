@@ -144,17 +144,42 @@ class exchange_data:
             "outcomes": serialized_outcomes,
         }
 
-    def account_valid(self, mpid):
+    def _convert_float(self, num):
+        try:
+            return float(num)
+        except ValueError:
+            return None
+
+    def _convert_int(self, num):
+        try:
+            return int(num)
+        except ValueError:
+            return None
+
+    def _account_valid(self, mpid):
         return self.acctStatus[mpid] != -1 and mpid != 0
 
-    def outcome_valid(self, outcome_id):
+    def _outcome_valid(self, outcome_id):
+        outcome_id = self._convert_int(outcome_id)
+        if outcome_id is None:
+            return False
         if outcome_id < 0 or outcome_id >= self.maxOutcomes:
             return False
         if self.outcomes[outcome_id] is None:
             return False
         return True
 
-    def order_valid(self, order_id):
+    def _question_valid(self, question_id):
+        question_id = self._convert_int(question_id)
+        if question_id is None:
+            return False
+        if question_id < 0 or question_id >= self.maxQuestions:
+            return False
+        if self.questions[question_id] is None:
+            return False
+        return True
+
+    def _order_valid(self, order_id):
         if order_id < 0 or order_id >= self.maxOrders:
             return False
         if self.orderMPID[order_id] == -1:
@@ -189,33 +214,29 @@ class exchange_data:
         return True
 
     def create_question(self, notional, question, sub_outcomes):
-        try:
-            notional = int(notional)
-        except ValueError:
+        notional = self._convert_int(notional)
+        if notional is None:
             return False, "Notional value must be a positive integer"
 
         if len(question) != 2:
             return False, "Question arguments are missing or excessive"
 
-        try:
-            question_slot, question_desc = question
-            question_slot = int(question_slot)
-            if question_slot < 0 or question_slot >= self.maxQuestions:
-                raise Exception("InvalidSlot")
-            if self.questions[question_slot] is not None:
-                raise Exception("SlotOccupied")
-            for outcome in sub_outcomes:
-                outcome_slot, outcome_desc = outcome
-                outcome_slot = int(outcome_slot)
-                if outcome_slot < 0 or outcome_slot >= self.maxOutcomes:
-                    raise Exception("InvalidSlot")
-                if self.outcomes[outcome_slot] is not None:
-                    raise Exception("SlotOccupied")
-                outcome = [outcome_slot, outcome_desc]
-        except TypeError:
-            return False, "Invaild question or suboutcome arguments"
-        except Exception as e:
-            return False, f"Unexpected exception: {e}"
+        question_slot, question_desc = question
+        question_slot = self._convert_int(question_slot)
+        if question_slot is None:
+            return False, "Question slot must be an integer"
+        if not question_slot < 0 or question_slot >= self.maxQuestions:
+            return False, "Question slot out of bounds"
+        if self.questions[question_slot] is not None:
+            return False, "Question slot occupied"
+        for outcome in sub_outcomes:
+            outcome_slot, outcome_desc = outcome
+            outcome_slot = int(outcome_slot)
+            if outcome_slot < 0 or outcome_slot >= self.maxOutcomes:
+                return False, f"Provided outcome slot {outcome_slot} out of bounds"
+            if self.outcomes[outcome_slot] is not None:
+                return False, f"Provided outcome slot {outcome_slot} is occupied"
+            outcome[:] = [outcome_slot, outcome_desc]
 
         outcome_slots = [outcome_slot for outcome_slot, outcome_name in sub_outcomes]
 
@@ -244,9 +265,8 @@ class exchange_data:
         if self.outcomes[outcome_slot] is None:
             return False, "There is no outcome at this slot"
 
-        try:
-            settlement_value = int(settlement_value)
-        except ValueError:
+        settlement_value = self._convert_int(settlement_value)
+        if settlement_value is None:
             return False, "Settlement value should be an integer"
 
         outcome_clob: clob = self.outcomes[outcome_slot]
@@ -268,26 +288,26 @@ class exchange_data:
         question_outcome_slots = question.outcomeSlots
         question_notional = question.contractNotional
         cumulative_settlement_value = 0
-        for outcome_slot, settlement_value in settlement_values.values():
-            try:
-                outcome_slot = int(outcome_slot)
-            except:
-                return False, "One or more outcome slots are not numbers"
+        for outcome_slot, settlement_value in settlement_values.items():
+            outcome_slot = self._convert_int(outcome_slot)
+            if outcome_slot is None:
+                return False, f"Provided outcome slot {outcome_slot} is empty"
             if outcome_slot not in question_outcome_slots:
                 return (
                     False,
-                    "One or more suboutcomes in the question is absent in settlement arguments",
+                    f"Provided outcome slot {outcome_slot} is unaffliated with the question",
                 )
-            try:
-                settlement_value = float(settlement_value)
-            except ValueError:
-                return False, "One or more settlement values is not a number"
-            if settlement_value != int(settlement_value):
-                return False, "One or more settlement values is not an integer"
+            settlement_value = self._convert_int(settlement_value)
+            settlement_value_designation = f"Settlement value {settlement_value} for outcome at slot {outcome_slot}"
+            if settlement_value is None:
+                return (
+                    False,
+                    f"{settlement_value_designation} is not an integer",
+                )
             if settlement_value < 0 or settlement_value > question_notional:
                 return (
                     False,
-                    "One or more settlement values is outside of the valid range",
+                    f"{settlement_value_designation} is outside of the valid range",
                 )
             cumulative_settlement_value += settlement_value
         if cumulative_settlement_value != question_notional:
@@ -331,9 +351,9 @@ class exchange_data:
         return False, "This account slot is already taken"
 
     def post_order(self, mpid, outcome_id, price, side, qty):
-        if not self.account_valid(mpid):
+        if not self._account_valid(mpid):
             return False, "Account slot is not valid"
-        if not self.outcome_valid(outcome_id):
+        if not self._outcome_valid(outcome_id):
             return False, "Outcome slot is not vaild"
 
         return self.outcomes[outcome_id].place_order(
@@ -341,7 +361,7 @@ class exchange_data:
         )
 
     def cancel_order(self, mpid, order_idx):
-        if not self.order_valid(order_idx):
+        if not self._order_valid(order_idx):
             return False, "Order slot invaild"
         order_outcome = self.orderOutcome[order_idx]
         return self.outcomes[order_outcome].cancel_order(order_idx)
