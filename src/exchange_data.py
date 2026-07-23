@@ -310,8 +310,16 @@ class exchange_data:
                     f"{settlement_value_designation} is outside of the valid range",
                 )
             cumulative_settlement_value += settlement_value
+        if len(settlement_values) != question_outcome_slots:
+            return (
+                False,
+                "Number of provided outcomes is smaller than that of the question",
+            )
         if cumulative_settlement_value != question_notional:
-            return False, "The sum of settlement values is invalid"
+            return (
+                False,
+                f"The sum of provided settlement values {cumulative_settlement_value} is not equal to the question notional {question_notional}.",
+            )
         for outcome_slot, settlement_value in settlement_values.values():
             self.settle_outcome(
                 outcome_slot=outcome_slot,
