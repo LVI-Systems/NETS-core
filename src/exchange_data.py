@@ -24,7 +24,7 @@ class exchange_data:
         self.maxQuestions = int(serialized_data["max_questions"])
         self.maxOutcomes = int(serialized_data["max_outcomes"])
 
-        acct_default = [-1 for i in range(0, max_accounts)]
+        acct_default = [-1 for i in range(max_accounts)]
         # account status
         # -1 = no account at this slot
         # 1 = activated trading account at this slot
@@ -36,10 +36,10 @@ class exchange_data:
         self.acctTailOrder = array.array("i", acct_default)
         self.acctTotalOrders = array.array("i", acct_default)
 
-        self.orderID = array.array("i", [i for i in range(0, self.acctMaxOrders)])
-        self.vacantOrderID = array.array("i", [i for i in range(0, self.acctMaxOrders)])
+        self.orderID = array.array("i", [i for i in range(self.acctMaxOrders)])
+        self.vacantOrderID = array.array("i", [i for i in range(self.acctMaxOrders)])
 
-        order_default = [-1 for i in range(0, self.acctMaxOrders)]
+        order_default = [-1 for i in range(self.acctMaxOrders)]
         self.orderMPID = array.array("i", order_default)
         self.orderOutcome = array.array("i", order_default)
         self.orderPrice = array.array("i", order_default)
@@ -50,8 +50,8 @@ class exchange_data:
         self.orderClobHead = array.array("i", order_default)
         self.orderClobTail = array.array("i", order_default)
 
-        self.outcomes = [None for i in range(0, self.maxOutcomes)]
-        self.questions = [None for i in range(0, self.maxQuestions)]
+        self.outcomes = [None for i in range(self.maxOutcomes)]
+        self.questions = [None for i in range(self.maxQuestions)]
         self.usedOrders = 0
 
     def load_exchange_objects(self, serialized_data):
@@ -165,9 +165,7 @@ class exchange_data:
             return False
         if outcome_id < 0 or outcome_id >= self.maxOutcomes:
             return False
-        if self.outcomes[outcome_id] is None:
-            return False
-        return True
+        return self.outcomes[outcome_id] is not None
 
     def _question_valid(self, question_id):
         question_id = self._convert_int(question_id)
@@ -175,16 +173,12 @@ class exchange_data:
             return False
         if question_id < 0 or question_id >= self.maxQuestions:
             return False
-        if self.questions[question_id] is None:
-            return False
-        return True
+        return self.questions[question_id] is not None
 
-    def _order_valid(self, order_id):
+    def _order_alive(self, order_id):
         if order_id < 0 or order_id >= self.maxOrders:
             return False
-        if self.orderMPID[order_id] == -1:
-            return False
-        return True
+        return self.orderMPID[order_id] != -1
 
     def create_outcome(
         self,
@@ -369,7 +363,7 @@ class exchange_data:
         )
 
     def cancel_order(self, mpid, order_idx):
-        if not self._order_valid(order_idx):
+        if not self._order_alive(order_idx):
             return False, "Order slot invaild"
         order_outcome = self.orderOutcome[order_idx]
         return self.outcomes[order_outcome].cancel_order(order_idx)
