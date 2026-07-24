@@ -176,7 +176,8 @@ class exchange_data:
         return self.questions[question_id] is not None
 
     def _order_alive(self, order_id):
-        if order_id < 0 or order_id >= self.maxOrders:
+        order_id = self._convert_int(order_id)
+        if order_id is None or order_id < 0 or order_id >= self.maxOrders:
             return False
         return self.orderMPID[order_id] != -1
 
