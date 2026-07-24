@@ -248,7 +248,6 @@ class clob:
         if qty == 0:
             self._dealloc_order(mpid=mpid, order_slot=new_order_idx)
         else:
-            self.orderMPID[new_order_idx] = mpid
             self.orderOutcome[new_order_idx] = self.outcomeSlot
             self.orderPrice[new_order_idx] = price
             self.orderSide[new_order_idx] = side
