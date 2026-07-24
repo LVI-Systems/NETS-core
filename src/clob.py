@@ -271,14 +271,15 @@ class clob:
         book_price = price * [-1, 1][side]
         side_book = self.books[side]
         current_tob = self.tob[side]
-
+        tob_empty = current_tob is None
+        new_tob = book_price < current_tob
         # Adjust top of book and the sum thereof if necessary.
+        if tob_empty or new_tob:
+            self.tob[side] = book_price
         if self.questionEnabled:
-            if current_tob is None:
-                self.tob[side] = book_price
+            if tob_empty:
                 self.tobSum[side] += -self.contractNotional * side == 1 + price
-            elif book_price < current_tob:
-                self.tob[side] = book_price
+            elif new_tob:
                 self.tobSum[side] += (current_tob - book_price) * ([1, -1][side])
 
         # price:[h_price, t_price, h_order, t_order, tot_orders, tot_qty]
