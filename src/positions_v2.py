@@ -45,10 +45,9 @@ class positions:
         """
         return qty * (price if side == 0 else self.contractNotional - price)
 
-    def _update_orders(self, mpid, price, side, qty):
+    def update_orders(self, mpid, price, side, qty):
         opposite_side = [1, 0][side]
-        mpid_present = mpid in self.acctPositions
-        acct_state = self.acctPositions[mpid] if mpid_present else [[0, 0], [0, 0], [0, 0], 0]
+        acct_state = self.acctPositions[mpid]
         acct_positions, acct_order_qtys, acct_collateral, collateral_taken = acct_state
         nettable_position = acct_positions[opposite_side] - acct_order_qtys[side]
         prev_nettable_position = 0 if nettable_position < 0 else nettable_position
@@ -70,34 +69,13 @@ class positions:
         if collateral_change > 0 and qty < 0:
             raise Exception("Fatal boundary violation: Collateral usage increases on order removal")
         if self.acctBalance[mpid] < collateral_change:
-            return False, 'InsufficiantCollateral'
+            return False
 
         self.acctBalance[mpid] += collateral_change
         acct_order_qtys[side] += qty
         acct_collateral[side] = new_collateral
         acct_state[3] = new_max_collateral
-        if not mpid_present:
-            self.acctPositions[mpid] = acct_state
-        return True, 'Success'
-
-    def post_order(self, mpid, price, side, qty):
-        return self._update_orders(mpid, price, side, qty)
-
-    def cancel_order(self, mpid, price, side, qty):
-        return self._update_orders(mpid, price, side, -qty)
-
-    def fill_order(self, mpid, order_price, order_side, fill_price, fill_qty):
-        opposite_side = [1, 0][order_side]
-        self._update_orders(mpid, order_price, order_side, -fill_qty)
-        acct_positions = self.acctPositions[mpid][0]
-        opposite_position = acct_positions[opposite_side]
-        position_closed = opposite_position if fill_qty > opposite_position else fill_qty
-        position_opened = fill_qty - position_closed
-        collateral_used = self.order_collateral(fill_price, order_side, fill_qty)
-        self.acctBalance[mpid] += self.contractNotional * position_closed - collateral_used
-        acct_positions[order_side] += position_opened
-        acct_positions[opposite_position] -= position_closed
-        self.exchange_fill(fill_price, opposite_side, fill_qty)
+        return True
 
     def get_position_settlement_value(self, position, settlement_price):
         """
