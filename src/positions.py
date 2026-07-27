@@ -46,6 +46,14 @@ class positions:
         return qty * (price if side == 0 else self.contractNotional - price)
 
     def _update_orders(self, mpid, price, side, qty):
+        '''
+        Adds or subtracts orders from collateral.
+        Args:
+            mpid (int): Market Participant ID
+            price (int): Order price
+            side (int): Order side
+            qty(int): Order quantity (positive for adding and vice versa)
+        '''
         opposite_side = [1, 0][side]
         mpid_present = mpid in self.acctPositions
         acct_state = self.acctPositions[mpid] if mpid_present else [[0, 0], [0, 0], [0, 0], 0]
@@ -96,7 +104,7 @@ class positions:
         collateral_used = self.order_collateral(fill_price, order_side, fill_qty)
         self.acctBalance[mpid] += self.contractNotional * position_closed - collateral_used
         acct_positions[order_side] += position_opened
-        acct_positions[opposite_position] -= position_closed
+        acct_positions[opposite_side] -= position_closed
         self.exchange_fill(fill_price, opposite_side, fill_qty)
 
     def get_position_settlement_value(self, position, settlement_price):
