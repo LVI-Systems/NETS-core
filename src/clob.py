@@ -181,9 +181,7 @@ class clob:
         if new_order_idx is False:
             return False, "Account-wide order limit has been reached"
 
-        _post_order_success, return_msg = self.userPositions.post_order(
-            mpid, price, side, qty
-        )
+        _post_order_success, return_msg = self.userPositions.post_order(mpid, price, side, qty)
         if not _post_order_success:
             return False, return_msg
 
@@ -349,9 +347,7 @@ class clob:
         order_qty = self.orderQty[order_idx]
 
         if order_qty != 0:
-            self.userPositions.cancel_order(
-                order_mpid, order_price, order_side, order_qty
-            )
+            self.userPositions.cancel_order(order_mpid, order_price, order_side, order_qty)
 
         order_head = self.orderClobHead[order_idx]
         order_tail = self.orderClobTail[order_idx]
@@ -417,9 +413,7 @@ class clob:
                 self.cancel_order(order_mpid)
                 continue
 
-            self.userPositions.fill_order(
-                order_mpid, order_price, side, order_price, fill_qty
-            )
+            self.userPositions.fill_order(order_mpid, order_price, side, order_price, fill_qty)
             order_qty -= fill_qty
             if order_qty == 0:
                 self.cancel_order(head_order)
@@ -432,9 +426,7 @@ class clob:
 
     def settle_outcome(self, settlement_value):
         if settlement_value < 0 or settlement_value > self.contractNotional:
-            raise Exception(
-                "Fatal error: Uncaught attempt to settle outcome at an invalid price"
-            )
+            raise Exception("Fatal error: Uncaught attempt to settle outcome at an invalid price")
 
         self.cancel_all_orders()
         self.userPositions.settle_outcome(settlement_value)

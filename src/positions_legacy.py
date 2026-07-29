@@ -31,9 +31,7 @@ class positions:
             qty (int): Execution quantity
         """
         self.exchangePosition[side == 0] += qty
-        self.exchangeCollateralUsed += (
-            price if side == 0 else self.contractNotional - price
-        ) * qty
+        self.exchangeCollateralUsed += (price if side == 0 else self.contractNotional - price) * qty
 
     def order_collateral(self, price, side, qty):
         """
@@ -162,15 +160,12 @@ class positions:
         opposite_position = acct_position[opposite_side]
 
         # Position quantity closed by the fill
-        position_size_closed = (
-            opposite_position if fill_qty > opposite_position else fill_qty
-        )
+        position_size_closed = opposite_position if fill_qty > opposite_position else fill_qty
 
         self.cancel_order(mpid, order_price, order_side, fill_qty)
 
-        balance_chg = (
-            self.contractNotional * position_size_closed
-            - self.order_collateral(fill_price, order_side, fill_qty)
+        balance_chg = self.contractNotional * position_size_closed - self.order_collateral(
+            fill_price, order_side, fill_qty
         )
 
         self.acctAvbl[mpid] += balance_chg

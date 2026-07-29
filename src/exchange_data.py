@@ -75,9 +75,7 @@ class exchange_data:
             self.orderClobTail[order_idx] = order_data[8]
 
         for outcome_idx, outcome_data in serialized_data["outcomes"].items():
-            self.outcomes[outcome_idx] = clob(
-                exchange_data=self, serialized_data=outcome_data
-            )
+            self.outcomes[outcome_idx] = clob(exchange_data=self, serialized_data=outcome_data)
 
         for question_idx, question_data in serialized_data["questions"].items():
             self.questions[question_idx] = question(
@@ -254,9 +252,7 @@ class exchange_data:
 
         return True, "Question has been initialized successfully"
 
-    def settle_outcome(
-        self, outcome_slot, settlement_value, _bypass_question_check=False
-    ):
+    def settle_outcome(self, outcome_slot, settlement_value, _bypass_question_check=False):
         if self.outcomes[outcome_slot] is None:
             return False, "There is no outcome at this slot"
 
@@ -293,7 +289,9 @@ class exchange_data:
                     f"Provided outcome slot {outcome_slot} is unaffliated with the question",
                 )
             settlement_value = self._convert_int(settlement_value)
-            settlement_value_designation = f"Settlement value {settlement_value} for outcome at slot {outcome_slot}"
+            settlement_value_designation = (
+                f"Settlement value {settlement_value} for outcome at slot {outcome_slot}"
+            )
             if settlement_value is None:
                 return (
                     False,
@@ -359,9 +357,7 @@ class exchange_data:
         if not self._outcome_valid(outcome_id):
             return False, "Outcome slot is not vaild"
 
-        return self.outcomes[outcome_id].place_order(
-            mpid=mpid, price=price, side=side, qty=qty
-        )
+        return self.outcomes[outcome_id].place_order(mpid=mpid, price=price, side=side, qty=qty)
 
     def cancel_order(self, mpid, order_idx):
         if not self._order_alive(order_idx):
@@ -381,9 +377,7 @@ class exchange_data:
                 Raises Exception if global order limit has been reached.
         """
         if self.usedOrders == self.maxOrders:
-            raise Exception(
-                "Exchange out of memory: global order limit has been reached"
-            )
+            raise Exception("Exchange out of memory: global order limit has been reached")
 
         if self.acctTotalOrders[mpid] == self.acctMaxOrders:
             return False
