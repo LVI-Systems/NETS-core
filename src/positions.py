@@ -31,9 +31,7 @@ class positions:
             qty (int): Execution quantity
         """
         self.exchangePosition[side == 0] += qty
-        self.exchangeCollateralUsed += (
-            price if side == 0 else self.contractNotional - price
-        ) * qty
+        self.exchangeCollateralUsed += (price if side == 0 else self.contractNotional - price) * qty
 
     def order_collateral(self, price, side, qty):
         """
@@ -46,14 +44,14 @@ class positions:
         return qty * (price if side == 0 else self.contractNotional - price)
 
     def _update_orders(self, mpid, price, side, qty):
-        '''
+        """
         Adds or subtracts orders from collateral.
         Args:
             mpid (int): Market Participant ID
             price (int): Order price
             side (int): Order side
             qty(int): Order quantity (positive for adding and vice versa)
-        '''
+        """
         # Formula for collateral taken on each side:
         # cumulative order collateral at side <-- cost term
         # - contract notional * min(cumulative order quantity at side, cumulative real position at opposite side) <-- revenue term
@@ -75,26 +73,29 @@ class positions:
         acct_state = self.acctPositions[mpid] if mpid_present else [[0, 0], [0, 0], [0, 0], 0]
         acct_positions, acct_order_qtys, acct_collateral, collateral_taken = acct_state
         nettable_position = acct_positions[opposite_side] - acct_order_qtys[side]
-        prev_nettable_position = 0 if nettable_position < 0 else nettable_position
+        prev_nettable_position = max(0, nettable_position)
         nettable_position -= qty
-        nettable_position = 0 if nettable_position < 0
+        nettable_position = max(0, nettable_position)
         # Adding order which increases netting qty
         # nettable_position (smaller) - prev_nettable_position(larger)
         # vice versa
         nettable_position_delta = nettable_position - prev_nettable_position
         order_collateral_delta = self.order_collateral(price, side, qty)
-        net_collateral_delta = self.contractNotional * nettable_position_delta + order_collateral_delta
+        net_collateral_delta = (
+            self.contractNotional * nettable_position_delta + order_collateral_delta
+        )
 
         new_collateral = acct_collateral[side] + net_collateral_delta
         opposite_collateral = acct_collateral[opposite_side]
-        new_max_collateral = new_collateral if new_collateral > opposite_collateral else opposite_collateral
+        new_max_collateral = max(new_collateral, opposite_collateral)
+
         if new_max_collateral < 0:
             raise Exception("Fatal error: Both sides contain net positive collateral deltas")
         collateral_change = new_max_collateral - collateral_taken
         if collateral_change > 0 and qty < 0:
             raise Exception("Fatal boundary violation: Collateral usage increases on order removal")
         if self.acctBalance[mpid] < collateral_change:
-            return False, 'InsufficiantCollateral'
+            return False, "InsufficiantCollateral"
 
         self.acctBalance[mpid] += collateral_change
         acct_order_qtys[side] += qty
@@ -102,7 +103,7 @@ class positions:
         acct_state[3] = new_max_collateral
         if not mpid_present:
             self.acctPositions[mpid] = acct_state
-        return True, 'Success'
+        return True, "Success"
 
     def post_order(self, mpid, price, side, qty):
         return self._update_orders(mpid, price, side, qty)
@@ -116,28 +117,30 @@ class positions:
         acct_positions, acct_order_qty, acct_side_collateral, acct_collateral = acct_state
 
         opposite_position = acct_positions[opposite_side]
-        position_closed = opposite_position if fill_qty > opposite_position else fill_qty
+        position_closed = min(fill_qty, opposite_position)
         position_opened = fill_qty - position_closed
         collateral_used = self.order_collateral(fill_price, order_side, fill_qty)
         self.acctBalance[mpid] += self.contractNotional * position_closed - collateral_used
 
         # fill side processing: -order collateral, +unnetting
         side_order_qty = acct_order_qty[order_side]
-        old_nettable = opposite_position if opposite_position < side_order_qty else side_order_qty
+        old_nettable = min(opposite_position, side_order_qty)
         side_order_qty -= fill_qty
         opposite_position -= position_closed
-        new_nettable = opposite_position if opposite_position < side_order_qty else side_order_qty
+        new_nettable = min(opposite_position, side_order_qty)
 
         acct_order_qty[order_side] = side_order_qty
         acct_positions[opposite_side] = opposite_position
-        acct_side_collateral[order_side] += self.contractNotional * (new_nettable - old_nettable) - self.order_collateral(order_price, order_side, fill_qty)
+        acct_side_collateral[order_side] += self.contractNotional * (
+            new_nettable - old_nettable
+        ) - self.order_collateral(order_price, order_side, fill_qty)
 
         # opposite side processing: -netting
         side_position = acct_positions[order_side]
-        side_order_qty = acct_order_qty[opposite_side]
-        old_nettable = side_position if side_position < side_order_qty else side_order_qty
+        opposide_side_order_qty = acct_order_qty[opposite_side]
+        old_nettable = min(side_position, opposide_side_order_qty)
         side_position += position_opened
-        new_nettable = side_position if side_position < side_order_qty else side_order_qty
+        new_nettable = min(side_position, opposite_side_order_qty)
 
         acct_positions[order_side] = side_position
         acct_side_collateral[opposite_side] += self.contractNotional * (new_nettable - old_nettable)
