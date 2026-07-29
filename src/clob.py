@@ -226,8 +226,7 @@ class clob:
                     if qty_matched == -1:
                         qty_matched = outcome_quote_qty
                     else:
-                        if outcome_quote_qty < qty_matched:
-                            qty_matched = outcome_quote_qty
+                        qty_matched = min(qty_matched, outcome_quote_qty)
 
                     avl_outcomes.append(outcome)
 
