@@ -69,8 +69,10 @@ class positions:
         # STEP C: Update side collateral term and max collateral term of the two
 
         opposite_side = [1, 0][side]
-        mpid_present = mpid in self.acctPositions
-        acct_state = self.acctPositions[mpid] if mpid_present else [[0, 0], [0, 0], [0, 0], 0]
+        acct_state = self.acctPositions.get(mpid)
+        new_mpid = acct_state is None
+        if new_mpid:
+            acct_state = [[0, 0], [0, 0], [0, 0], 0]
         acct_positions, acct_order_qtys, acct_collateral, collateral_taken = acct_state
         nettable_position = acct_positions[opposite_side] - acct_order_qtys[side]
         prev_nettable_position = max(0, nettable_position)
@@ -101,7 +103,7 @@ class positions:
         acct_order_qtys[side] += qty
         acct_collateral[side] = new_collateral
         acct_state[3] = new_max_collateral
-        if not mpid_present:
+        if new_mpid:
             self.acctPositions[mpid] = acct_state
         return True, "Success"
 
