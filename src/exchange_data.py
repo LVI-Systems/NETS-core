@@ -179,6 +179,11 @@ class exchange_data:
             return False
         return self.orderMPID[order_id] != -1
 
+    def get_l2(self, outcome_id):
+        if not self._outcome_valid(outcome_id):
+            return False, "Invalid Outcome"
+        self.outcomes[outcome_id].get_l2(outcome_id)
+
     def create_outcome(
         self,
         outcome_slot: int,
