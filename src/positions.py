@@ -54,6 +54,22 @@ class positions:
             side (int): Order side
             qty(int): Order quantity (positive for adding and vice versa)
         '''
+        # Formula for collateral taken on each side:
+        # cumulative order collateral at side <-- cost term
+        # - contract notional * min(cumulative order quantity at side, cumulative real position at opposite side) <-- revenue term
+        #
+        # STEP A: Find the chance in the revenue term
+        # a1. Find the number of nettable lots at the opposite side of the order (this can be negative)
+        # a2. Decrease that number by the order quantity (or increase it if it is an order cancellation)
+        # a3. Clamp the old and new values to be above or equal to 0
+        # a4. Get the difference: new - old (+ve: +collateral, -ve: -collateral)
+        #
+        # STEP B: Find the chance in the cost term
+        # b1. Find the cost of the order
+        # b2. +collateral for adding order (positive qty) and -collateral for removing order (negative qty)
+        #
+        # STEP C: Update side collateral term and max collateral term of the two
+
         opposite_side = [1, 0][side]
         mpid_present = mpid in self.acctPositions
         acct_state = self.acctPositions[mpid] if mpid_present else [[0, 0], [0, 0], [0, 0], 0]
@@ -96,15 +112,38 @@ class positions:
 
     def fill_order(self, mpid, order_price, order_side, fill_price, fill_qty):
         opposite_side = [1, 0][order_side]
-        self._update_orders(mpid, order_price, order_side, -fill_qty)
-        acct_positions = self.acctPositions[mpid][0]
+        acct_state = self.acctPositions[mpid]
+        acct_positions, acct_order_qty, acct_side_collateral, acct_collateral = acct_state
+
         opposite_position = acct_positions[opposite_side]
         position_closed = opposite_position if fill_qty > opposite_position else fill_qty
         position_opened = fill_qty - position_closed
         collateral_used = self.order_collateral(fill_price, order_side, fill_qty)
         self.acctBalance[mpid] += self.contractNotional * position_closed - collateral_used
-        acct_positions[order_side] += position_opened
-        acct_positions[opposite_side] -= position_closed
+
+        # fill side processing: -order collateral, +unnetting
+        side_order_qty = acct_order_qty[order_side]
+        old_nettable = opposite_position if opposite_position < side_order_qty else side_order_qty
+        side_order_qty -= fill_qty
+        opposite_position -= position_closed
+        new_nettable = opposite_position if opposite_position < side_order_qty else side_order_qty
+
+        acct_order_qty[order_side] = side_order_qty
+        acct_positions[opposite_side] = opposite_position
+        acct_side_collateral[order_side] += self.contractNotional * (new_nettable - old_nettable) - self.order_collateral(order_price, order_side, fill_qty)
+
+        # opposite side processing: -netting
+        side_position = acct_positions[order_side]
+        side_order_qty = acct_order_qty[opposite_side]
+        old_nettable = side_position if side_position < side_order_qty else side_order_qty
+        side_position += position_opened
+        new_nettable = side_position if side_position < side_order_qty else side_order_qty
+
+        acct_positions[order_side] = side_position
+        acct_side_collateral[opposite_side] += self.contractNotional * (new_nettable - old_nettable)
+
+        # handle net collateral change
+        new_collateral = max(acct_side_collateral)
         self.exchange_fill(fill_price, opposite_side, fill_qty)
 
     def get_position_settlement_value(self, position, settlement_price):
