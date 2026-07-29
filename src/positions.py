@@ -203,12 +203,10 @@ class positions:
         """
         for mpid, user_position in self.acctPositions.items():
             mpid = int(mpid)
-            user_collateral_usage = user_position[2]
-            collateral_freed = sum(
-                [max(0, side_collateral) for side_collateral in user_collateral_usage]
-            )
+            collateral_freed = max(0, user_position[3])
             self.acctAvbl[mpid] += collateral_freed
 
             # zero the total user side order lot quantity and collateral usage
             user_position[1] = [0, 0]
-            user_collateral_usage = [0, 0]
+            user_position[2] = [0, 0]
+            user_position[3] = 0
