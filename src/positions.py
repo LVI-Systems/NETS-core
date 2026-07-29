@@ -184,7 +184,7 @@ class positions:
         self.acctAvbl[0] += exchange_balance_delta
 
         cumulative_settled = 0
-        for mpid, user_position in self.acctPositions.values():
+        for mpid, user_position in self.acctPositions.items():
             mpid = int(mpid)
             user_market_position = user_position[0]
             user_position_settlement_value = self.get_position_settlement_value(
@@ -201,7 +201,7 @@ class positions:
         Log the removal of all orders assosciated with the outcome.
         WARNING: This function does not modify order data and only frees their collateral.
         """
-        for mpid, user_position in self.acctPositions.values():
+        for mpid, user_position in self.acctPositions.items():
             mpid = int(mpid)
             user_collateral_usage = user_position[2]
             collateral_freed = sum(
