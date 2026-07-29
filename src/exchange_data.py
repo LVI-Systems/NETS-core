@@ -179,10 +179,13 @@ class exchange_data:
             return False
         return self.orderMPID[order_id] != -1
 
-    def get_l2(self, outcome_id):
+    def get_l1(self, outcome_id):
+        return self.get_l1(outcome_id, 1)
+
+    def get_l2(self, outcome_id, max_levels):
         if not self._outcome_valid(outcome_id):
             return False, "Invalid Outcome"
-        self.outcomes[outcome_id].get_l2(outcome_id)
+        return True, self.outcomes[outcome_id].get_depth(outcome_id, max_levels)
 
     def create_outcome(
         self,

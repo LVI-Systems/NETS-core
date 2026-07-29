@@ -152,8 +152,8 @@ class clob:
             return -1
         return self.books[side][tob][5]
 
-    def get_l2(self, max_levels=20):
-        levels = {"b": {}, "o": {}}
+    def get_depth(self, max_levels=20):
+        levels = {"b": [], "o": []}
         for side, tob in enumerate(self.tob):
             current_level = tob
             if current_level is None:
@@ -163,7 +163,7 @@ class clob:
             side_levels = levels[side_key]
             for i in range(max_levels):
                 price_lvl = side_book[current_level]
-                side_levels[current_level] = price_lvl[5]
+                side_levels.append([current_level, price_lvl[5]])
                 current_level = price_lvl[1]
                 if current_level is None:
                     break
