@@ -140,7 +140,7 @@ class positions:
         # opposite side processing: -netting
         side_position = acct_positions[order_side]
         opposite_side_order_qty = acct_order_qty[opposite_side]
-        old_nettable = min(side_position, opposide_side_order_qty)
+        old_nettable = min(side_position, opposite_side_order_qty)
         side_position += position_opened
         new_nettable = min(side_position, opposite_side_order_qty)
 
