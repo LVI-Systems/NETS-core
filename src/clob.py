@@ -1,12 +1,11 @@
 from weakref import proxy
+
+from positions import Positions as pos
+from question import Question as qst
 from sortedcontainers import SortedDict as sd
 
-from exchange_data import exchange_data as exchg_data
-from positions import positions as p
-from question import question as q
 
-
-class clob:
+class Clob:
     """Central Limit Order Book (CLOB) implementation.
 
     Manages order books (bids and asks), top-of-book tracking,
@@ -14,11 +13,11 @@ class clob:
     best available liquidity.
     """
 
-    def __init__(self, exchange_data: exchg_data, serialized_data: dict):
+    def __init__(self, _core: core, serialized_data: dict):
         """Initialize the CLOB with exchange data and market configuration.
 
         Args:
-            exchange_data: Shared exchange state object.
+            _core: Shared exchange state object.
             serialized_data: Dict containing notional, question_id,
                 outcome_id, and selection_id for the market.
         """
@@ -29,15 +28,15 @@ class clob:
         self.books = [sd(), sd()]
         self.priceLevels = [self.books[0].keys(), self.books[1].keys()]
         self.contractNotional = int(serialized_data["notional"])
-        self.userPositions = positions(
-            _exchange_data=exchange_data,
+        self.userPositions = pos(
+            _core=_core,
             serialized_data=serialized_data.get(
                 "user_positions", {"notional": self.contractNotional}
             ),
         )
 
         # TODO Pending removal of acctOrderLimit in this class
-        self.acctOrderLimit = exchange_data.acctMaxOrders
+        self.acctOrderLimit = _core.acctMaxOrders
         if "question_id" in serialized_data:
             self.questionSlot = int(serialized_data["question_id"])
         else:
@@ -46,24 +45,24 @@ class clob:
 
         self.questionEnabled = self.questionSlot != -1
         if self.questionEnabled:
-            question:q = exchange_data.questions[self.questionSlot]
+            question:qst = _core.questions[self.questionSlot]
             self.tobSum = question.tob_sum
             self.linkedOutcomes = question.outcomeSlots
 
-        self._alloc_order = proxy(exchange_data._get_order_slot)
-        self._dealloc_order = proxy(exchange_data._release_order_slot)
-        self.orderID = proxy(exchange_data.orderID)
-        self.orderMPID = proxy(exchange_data.orderMPID)
-        self.orderOutcome = proxy(exchange_data.orderOutcome)
-        self.orderPrice = proxy(exchange_data.orderPrice)
-        self.orderSide = proxy(exchange_data.orderSide)
-        self.orderQty = proxy(exchange_data.orderQty)
-        self.orderAcctHead = proxy(exchange_data.orderAcctHead)
-        self.orderAcctTail = proxy(exchange_data.orderAcctTail)
-        self.orderClobHead = proxy(exchange_data.orderClobHead)
-        self.orderClobTail = proxy(exchange_data.orderClobTail)
+        self._alloc_order = proxy(_core._get_order_slot)
+        self._dealloc_order = proxy(_core._release_order_slot)
+        self.orderID = proxy(_core.orderID)
+        self.orderMPID = proxy(_core.orderMPID)
+        self.orderOutcome = proxy(_core.orderOutcome)
+        self.orderPrice = proxy(_core.orderPrice)
+        self.orderSide = proxy(_core.orderSide)
+        self.orderQty = proxy(_core.orderQty)
+        self.orderAcctHead = proxy(_core.orderAcctHead)
+        self.orderAcctTail = proxy(_core.orderAcctTail)
+        self.orderClobHead = proxy(_core.orderClobHead)
+        self.orderClobTail = proxy(_core.orderClobTail)
 
-        self.outcomeCLOBs = exchange_data.outcomes
+        self.outcomeCLOBs = _core.outcomes
 
         if "head_orders" in serialized_data:
             self.initialize(serialized_data["head_orders"])

@@ -1,10 +1,7 @@
 import array
 
-from clob import clob
-from question import question
 
-
-class exchange_data:
+class Core:
     def __init__(self, max_accounts, serialized_data: dict):
         """
         Manages global exchange state including order slots, account lifecycle,
@@ -74,12 +71,15 @@ class exchange_data:
             self.orderClobHead[order_idx] = order_data[7]
             self.orderClobTail[order_idx] = order_data[8]
 
+        from clob import Clob as clob
+        from question import Question as question
+
         for outcome_idx, outcome_data in serialized_data["outcomes"].items():
-            self.outcomes[outcome_idx] = clob(exchange_data=self, serialized_data=outcome_data)
+            self.outcomes[outcome_idx] = clob(_core=self, serialized_data=outcome_data)
 
         for question_idx, question_data in serialized_data["questions"].items():
             self.questions[question_idx] = question(
-                exchange_data=self, serialized_data=question_data
+                _core=self, serialized_data=question_data
             )
 
     def serialize(self):
@@ -201,8 +201,10 @@ class exchange_data:
         if self.outcomes[outcome_slot] is not None:
             return False
 
+        from clob import Clob as clob
+
         self.outcomes[outcome_slot] = clob(
-            exchange_data=self,
+            _core=self,
             serialized_data={
                 "outcome_description": outcome_description,
                 "contract_notional": notional,
@@ -238,6 +240,8 @@ class exchange_data:
             if self.outcomes[outcome_slot] is not None:
                 return False, f"Provided outcome slot {outcome_slot} is occupied"
             outcome[:] = [outcome_slot, outcome_desc]
+
+        from question import Question as question
 
         outcome_slots = [outcome_slot for outcome_slot, outcome_name in sub_outcomes]
 

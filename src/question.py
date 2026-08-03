@@ -1,6 +1,3 @@
-from clob import clob
-from exchange_data import exchange_data
-
 # SCHEMA
 # {
 #   'questionSlot': int
@@ -9,8 +6,8 @@ from exchange_data import exchange_data
 # }
 
 
-class question:
-    def __init__(self, exchange_data: exchange_data, serialized_data: dict):
+class Question:
+    def __init__(self, _core: core, serialized_data: dict):
         """
         Initializes a question object.
         A question is a group of mutually exclusive markets. Markets cannot

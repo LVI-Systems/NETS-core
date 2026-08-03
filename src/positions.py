@@ -1,8 +1,8 @@
 from weakref import proxy
 
 
-class positions:
-    def __init__(self, _exchange_data, serialized_data: dict):
+class Positions:
+    def __init__(self, _core, serialized_data: dict):
         self.contractNotional = serialized_data["notional"]
         # [[long, short], [bid_qty, offer_qty], [bid_collateral, offer_collateral], collateral_taken]
         # where the margin used by orders are contractNotional * (min(long, offer_qty) + min(short, bid_qty)) - bid_collateral - offer_collateral
@@ -11,8 +11,8 @@ class positions:
             self.acctPositions = serialized_data.get("positions", {})
         self.exchangePosition = serialized_data.get("exchange_position", [0, 0])
         self.exchangeCollateralUsed = serialized_data.get("exchange_collateral_used", 0)
-        self.acctBalance = proxy(_exchange_data.acctBalance)
-        self.acctAvbl = proxy(_exchange_data.acctAvailable)
+        self.acctBalance = proxy(_core.acctBalance)
+        self.acctAvbl = proxy(_core.acctAvailable)
 
     def serialize(self):
         return {
