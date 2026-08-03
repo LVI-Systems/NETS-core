@@ -180,7 +180,7 @@ class exchange_data:
         return self.orderMPID[order_id] != -1
 
     def get_l1(self, outcome_id):
-        return self.get_l1(outcome_id, 1)
+        return self.get_l2(outcome_id, 1)
 
     def get_l2(self, outcome_id, max_levels):
         if not self._outcome_valid(outcome_id):
@@ -321,7 +321,7 @@ class exchange_data:
                 False,
                 f"The sum of provided settlement values {cumulative_settlement_value} is not equal to the question notional {question_notional}.",
             )
-        for outcome_slot, settlement_value in settlement_values.values():
+        for outcome_slot, settlement_value in settlement_values.items():
             self.settle_outcome(
                 outcome_slot=outcome_slot,
                 settlement_value=settlement_value,

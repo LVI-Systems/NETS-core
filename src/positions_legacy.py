@@ -239,4 +239,4 @@ class positions:
 
             # zero the total user side order lot quantity and collateral usage
             user_position[1] = [0, 0]
-            user_collateral_usage = [0, 0]
+            user_collateral_usage[:] = [0, 0]

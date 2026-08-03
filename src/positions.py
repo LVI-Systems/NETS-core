@@ -97,7 +97,7 @@ class positions:
         if collateral_change > 0 and qty < 0:
             raise Exception("Fatal boundary violation: Collateral usage increases on order removal")
         if self.acctBalance[mpid] < collateral_change:
-            return False, "InsufficiantCollateral"
+            return False, "InsufficientCollateral"
 
         self.acctBalance[mpid] += collateral_change
         acct_order_qtys[side] += qty

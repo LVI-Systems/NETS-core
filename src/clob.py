@@ -1,11 +1,9 @@
 from weakref import proxy
-
-from clr_loader.util.coreclr_errors import current
 from sortedcontainers import SortedDict as sd
 
 from exchange_data import exchange_data as exchg_data
-from positions import positions
-from question import question
+from positions import positions as p
+from question import question as q
 
 
 class clob:
@@ -32,7 +30,7 @@ class clob:
         self.priceLevels = [self.books[0].keys(), self.books[1].keys()]
         self.contractNotional = int(serialized_data["notional"])
         self.userPositions = positions(
-            _exchange_data=exchg_data,
+            _exchange_data=exchange_data,
             serialized_data=serialized_data.get(
                 "user_positions", {"notional": self.contractNotional}
             ),
@@ -48,7 +46,7 @@ class clob:
 
         self.questionEnabled = self.questionSlot != -1
         if self.questionEnabled:
-            question: question = exchange_data.questions[self.questionSlot]
+            question:q = exchange_data.questions[self.questionSlot]
             self.tobSum = question.tob_sum
             self.linkedOutcomes = question.outcomeSlots
 
@@ -186,7 +184,7 @@ class clob:
             A tuple of (success: bool, message: str).
         """
         if not self.tradingEnabled:
-            return
+            return (False, "Trading disabled")
 
         price = int(price)
         qty = int(qty)
@@ -408,7 +406,6 @@ class clob:
         """
 
         side_tob = self.tob[side]
-        side_tob = self.tob[side]
         if side_tob is None:
             return False
 
@@ -417,7 +414,7 @@ class clob:
         lvl_orders = price_lvl[4]
         filled_qty = 0
 
-        for i in range(0, lvl_orders):
+        for i in range(lvl_orders):
             order_mpid = self.orderMPID[head_order]
             order_price = self.orderPrice[head_order]
             order_qty = self.orderQty[head_order]
@@ -427,7 +424,7 @@ class clob:
                 break
 
             if order_mpid == stp_mpid:
-                self.cancel_order(order_mpid)
+                self.cancel_order(head_order)
                 continue
 
             self.userPositions.fill_order(order_mpid, order_price, side, order_price, fill_qty)
@@ -449,7 +446,7 @@ class clob:
         self.userPositions.settle_outcome(settlement_value)
         return (
             True,
-            f'Outcome "{self.outcomeDescription} has been settled at {settlement_value}.',
+            f'Outcome "{self.outcomeDescription}" has been settled at {settlement_value}.',
         )
 
     def cancel_all_orders(self):
