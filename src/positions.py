@@ -31,7 +31,9 @@ class Positions:
             qty (int): Execution quantity
         """
         self.exchangePosition[side == 0] += qty
-        self.exchangeCollateralUsed += (price if side == 0 else self.contractNotional - price) * qty
+        self.exchangeCollateralUsed += (
+            price if side == 0 else self.contractNotional - price
+        ) * qty
 
     def order_collateral(self, price, side, qty):
         """
@@ -92,10 +94,14 @@ class Positions:
         new_max_collateral = max(new_collateral, opposite_collateral)
 
         if new_max_collateral < 0:
-            raise Exception("Fatal error: Both sides contain net positive collateral deltas")
+            raise Exception(
+                "Fatal error: Both sides contain net positive collateral deltas"
+            )
         collateral_change = new_max_collateral - collateral_taken
         if collateral_change > 0 and qty < 0:
-            raise Exception("Fatal boundary violation: Collateral usage increases on order removal")
+            raise Exception(
+                "Fatal boundary violation: Collateral usage increases on order removal"
+            )
         if self.acctBalance[mpid] < collateral_change:
             return False, "InsufficientCollateral"
 
@@ -116,13 +122,17 @@ class Positions:
     def fill_order(self, mpid, order_price, order_side, fill_price, fill_qty):
         opposite_side = [1, 0][order_side]
         acct_state = self.acctPositions[mpid]
-        acct_positions, acct_order_qty, acct_side_collateral, acct_collateral = acct_state
+        acct_positions, acct_order_qty, acct_side_collateral, acct_collateral = (
+            acct_state
+        )
 
         opposite_position = acct_positions[opposite_side]
         position_closed = min(fill_qty, opposite_position)
         position_opened = fill_qty - position_closed
         collateral_used = self.order_collateral(fill_price, order_side, fill_qty)
-        self.acctBalance[mpid] += self.contractNotional * position_closed - collateral_used
+        self.acctBalance[mpid] += (
+            self.contractNotional * position_closed - collateral_used
+        )
 
         # fill side processing: -order collateral, +unnetting
         side_order_qty = acct_order_qty[order_side]
@@ -145,7 +155,9 @@ class Positions:
         new_nettable = min(side_position, opposite_side_order_qty)
 
         acct_positions[order_side] = side_position
-        acct_side_collateral[opposite_side] += self.contractNotional * (new_nettable - old_nettable)
+        acct_side_collateral[opposite_side] += self.contractNotional * (
+            new_nettable - old_nettable
+        )
 
         # handle net collateral change
         new_collateral = max(acct_side_collateral)

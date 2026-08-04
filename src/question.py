@@ -1,3 +1,11 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+from weakref import proxy
+
+if TYPE_CHECKING:
+    from core import Core as core
+
 # SCHEMA
 # {
 #   'questionSlot': int
@@ -33,6 +41,7 @@ class Question:
         self.questionDescription = serialized_data["question_description"]
 
         self.tob_sum = [0, len(self.outcomeSlots) * self.contractNotional]
+        self.outcomes = proxy(_core.re)
 
     def serialize(self):
         return {

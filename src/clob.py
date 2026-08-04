@@ -1,8 +1,14 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
 from weakref import proxy
 
 from positions import Positions as pos
-from question import Question as qst
 from sortedcontainers import SortedDict as sd
+
+if TYPE_CHECKING:
+    from core import Core as core
+    from question import Question as qst
 
 
 class Clob:
@@ -45,7 +51,7 @@ class Clob:
 
         self.questionEnabled = self.questionSlot != -1
         if self.questionEnabled:
-            question:qst = _core.questions[self.questionSlot]
+            question: qst = _core.questions[self.questionSlot]
             self.tobSum = question.tob_sum
             self.linkedOutcomes = question.outcomeSlots
 
@@ -196,7 +202,9 @@ class Clob:
         if new_order_idx is False:
             return False, "Account-wide order limit has been reached"
 
-        _post_order_success, return_msg = self.userPositions.post_order(mpid, price, side, qty)
+        _post_order_success, return_msg = self.userPositions.post_order(
+            mpid, price, side, qty
+        )
         if not _post_order_success:
             return False, return_msg
 
@@ -361,7 +369,9 @@ class Clob:
         order_qty = self.orderQty[order_idx]
 
         if order_qty != 0:
-            self.userPositions.cancel_order(order_mpid, order_price, order_side, order_qty)
+            self.userPositions.cancel_order(
+                order_mpid, order_price, order_side, order_qty
+            )
 
         order_head = self.orderClobHead[order_idx]
         order_tail = self.orderClobTail[order_idx]
@@ -426,7 +436,9 @@ class Clob:
                 self.cancel_order(head_order)
                 continue
 
-            self.userPositions.fill_order(order_mpid, order_price, side, order_price, fill_qty)
+            self.userPositions.fill_order(
+                order_mpid, order_price, side, order_price, fill_qty
+            )
             order_qty -= fill_qty
             if order_qty == 0:
                 self.cancel_order(head_order)
@@ -439,7 +451,9 @@ class Clob:
 
     def settle_outcome(self, settlement_value):
         if settlement_value < 0 or settlement_value > self.contractNotional:
-            raise Exception("Fatal error: Uncaught attempt to settle outcome at an invalid price")
+            raise Exception(
+                "Fatal error: Uncaught attempt to settle outcome at an invalid price"
+            )
 
         self.cancel_all_orders()
         self.userPositions.settle_outcome(settlement_value)
