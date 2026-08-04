@@ -160,7 +160,7 @@ class Clob:
             side_levels = levels[side_key]
             for i in range(max_levels):
                 price_lvl = side_book[current_level]
-                side_levels.append([current_level, price_lvl[5]])
+                side_levels.append([abs(current_level), price_lvl[5]])
                 current_level = price_lvl[1]
                 if current_level is None:
                     break
