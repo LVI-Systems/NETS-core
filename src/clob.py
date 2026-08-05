@@ -3,8 +3,9 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from weakref import proxy
 
-from positions import Positions as pos
 from sortedcontainers import SortedDict as sd
+
+from positions import Positions as pos
 
 if TYPE_CHECKING:
     from core import Core as core

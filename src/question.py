@@ -41,7 +41,7 @@ class Question:
         self.questionDescription = serialized_data["question_description"]
 
         self.tob_sum = [0, len(self.outcomeSlots) * self.contractNotional]
-        self.outcomes = proxy(_core.re)
+        self.outcomes = proxy(_core.outcomes)
 
     def serialize(self):
         return {
@@ -50,3 +50,39 @@ class Question:
             "contract_notional": self.contractNotional,
             "question_description": self.questionDescription,
         }
+
+    def get_consolidated_l2(self, max_price_lvls=100, max_scans_lmt=10_000):
+        individual_l2s = [
+            self.outcomes[outcome_idx].get_depth(max_price_lvls)
+            for outcome_idx in self.outcomeSlots
+        ]
+
+        total_outcomes = len(self.outcomeSlots)
+        consolidated_books = [{"b": [], "o": []} for l2book in individual_l2s]
+
+        # iterating through all outcomes in the question
+        for outcome_idx in range(total_outcomes):
+            # populating L2book for a single question
+            for side_idx, representative_side in enumerate(["b", "o"]):
+                cumulative_cost = (
+                    -self.contractNotional * (total_outcomes - 1) if side_idx else 0
+                )
+                access_idx = [0 for i in range(total_outcomes)]
+                max_qty = -1
+                # scanning through all other L2books in the same question
+                for book_idx, book in enumerate(individual_l2s):
+                    if book_idx == outcome_idx:
+                        continue
+                    side_book = book[representative_side]
+                    tob_idx = access_idx[book_idx]
+                    if tob_idx >= len(side_book):
+                        continue
+                    # at this point we have confirmed that this specific contract which
+                    # we are scanning has orders
+                    tob_price, tob_qty = book[tob_idx]
+                    if side_idx:
+                        cumulative_cost -= self.contractNotional
+                    cumulative_cost +=
+                    if max_qty == -1 or tob_qty < max_qty:
+                        max_qty = tob_qty
+                virtual_level_price, virtual_level_qty = self.contractNotional - cumulative_cost
