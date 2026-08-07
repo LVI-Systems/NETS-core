@@ -162,6 +162,8 @@ class Positions:
         # handle net collateral change
         new_collateral = max(acct_side_collateral)
         self.exchange_fill(fill_price, opposite_side, fill_qty)
+        self.acctAvbl[mpid] += new_collateral - acct_collateral
+        acct_state[3] = new_collateral
 
     def get_position_settlement_value(self, position, settlement_price):
         """
