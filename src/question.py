@@ -52,6 +52,7 @@ class Question:
         }
 
     def get_consolidated_l2(self, max_price_lvls=100, max_scans_lmt=10_000):
+        # TODO: Split this up into a function to get the bid side and the offer side.
         individual_l2s = [
             self.outcomes[outcome_idx].get_depth(max_price_lvls)
             for outcome_idx in self.outcomeSlots
@@ -67,8 +68,8 @@ class Question:
                 cumulative_cost = (
                     -self.contractNotional * (total_outcomes - 1) if side_idx else 0
                 )
-                access_idx = [0 for i in range(total_outcomes)]
-                max_qty = -1
+                accessed_depth = [[0, 0] for i in range(total_outcomes)]
+                virtual_level_qty = -1
                 # scanning through all other L2books in the same question
                 for book_idx, book in enumerate(individual_l2s):
                     if book_idx == outcome_idx:

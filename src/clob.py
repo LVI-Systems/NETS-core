@@ -119,7 +119,7 @@ class Clob:
                     break
 
             for order in order_list:
-                self._post_order(current_order)
+                self._post_order(order)
 
     def best_executable_quote(self, side):
         """Return the best executable price for the given side.
